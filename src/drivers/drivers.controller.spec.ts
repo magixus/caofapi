@@ -12,7 +12,7 @@ describe('DriversController', () => {
     controller = module.get<DriversController>(DriversController);
   });
 
-  it('should be defined', () => {
+  it('Should be defined', () => {
     expect(controller).toBeDefined();
   });
 });

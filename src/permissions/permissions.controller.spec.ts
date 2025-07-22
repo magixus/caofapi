@@ -12,7 +12,7 @@ describe('PermissionsController', () => {
     controller = module.get<PermissionsController>(PermissionsController);
   });
 
-  it('should be defined', () => {
+  it('Should be defined', () => {
     expect(controller).toBeDefined();
   });
 });
