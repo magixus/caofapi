@@ -1,13 +1,22 @@
-import { IsDateString, IsEnum, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class CreateDriverDto {
   @IsString() firstName: string;
   @IsString() lastName: string;
-  @IsString() nationalId: string;
-  @IsDateString() dateOfBirth: string;
+  @IsString()
+  @Length(18, 18, { message: 'National ID must be exactly 18 digits' })
+  @Matches(/^\d+$/, { message: 'National ID must contain only digits' })
+  nationalId: string;
+  @IsDateString() dateOfBirth: Date;
   @IsString() placeOfBirth: string;
   @IsString() licenseNumber: string;
-  @IsDateString() licenseIssuedAt: string;
+  @IsDateString() licenseIssuedAt: Date;
   @IsEnum(['biometric', 'paper'])
   licenseType: string;
   @IsString() licenseIssuedPlace: string;

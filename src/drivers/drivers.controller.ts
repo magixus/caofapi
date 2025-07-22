@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -12,11 +10,11 @@ import {
   Delete,
   UseInterceptors,
   UploadedFiles,
-  ParseIntPipe,
   Query,
   Req,
   Put,
   UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -27,7 +25,7 @@ import { diskStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../guards/tenant.guard';
 import { join } from 'path';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @Controller('drivers')
 @ApiBearerAuth()
@@ -46,7 +44,7 @@ export class DriversController {
     }),
   )
   create(
-    @Body() dto: CreateDriverDto,
+    @Body(new ValidationPipe()) dto: CreateDriverDto,
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req,
   ) {
@@ -59,15 +57,30 @@ export class DriversController {
   }
 
   @Get()
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: 'Number of items per page (default: 10)',
+  })
   findAll(
-    @Query('page', ParseIntPipe) page = 1,
-    @Query('pageSize', ParseIntPipe) pageSize = 10,
+    @Query('page') page: string,
+    @Query('pageSize') pageSize: string,
     @Req() req,
   ) {
+    const pageNum = parseInt(page) || 1;
+    const size = parseInt(pageSize) || 10;
+
     return this.driversService.findAll(
       { companyId: req.companyId, isSuperAdmin: req.isSuperAdmin },
-      page,
-      pageSize,
+      pageNum,
+      size,
     );
   }
 

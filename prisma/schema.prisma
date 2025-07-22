@@ -69,10 +69,10 @@ model Driver {
   id                 String   @id @default(uuid())
   firstName          String
   lastName           String
-  nationalId         String
+  nationalId         String @db.Char(18)
   dateOfBirth        DateTime
   placeOfBirth       String
-  licenseNumber      String
+  licenseNumber      String @db.Char(10)
   licenseIssuedAt    DateTime
   licenseType        String // 'biometric' | 'paper'
   licenseIssuedPlace String
