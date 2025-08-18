@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { AppModule } from './app.module';
 
+console.log(process.env.PORT);
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = new DocumentBuilder()
@@ -20,7 +21,6 @@ async function bootstrap() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.useStaticAssets(join(__dirname, '..', '..', 'uploads'), {
     prefix: '/uploads/',
   });

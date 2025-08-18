@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,21 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Company {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  users     User[]
-  roles     Role[]
-  drivers    Driver[]
-}
-
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
   password     String
-  company      Company    @relation(fields: [companyId], references: [id])
-  companyId    String
   roles        UserRole[]
   createdAt    DateTime   @default(now())
   isSuperAdmin Boolean    @default(false)
@@ -36,8 +19,6 @@ model User {
 model Role {
   id          String           @id @default(uuid())
   name        String
-  company     Company          @relation(fields: [companyId], references: [id])
-  companyId   String
   permissions RolePermission[]
   userRoles   UserRole[]
 }
@@ -65,22 +46,197 @@ model UserRole {
   roleId String
 }
 
-model Driver {
-  id                 String   @id @default(uuid())
-  firstName          String
-  lastName           String
-  nationalId         String @db.Char(18)
-  dateOfBirth        DateTime
-  placeOfBirth       String
-  licenseNumber      String @db.Char(10)
-  licenseIssuedAt    DateTime
-  licenseType        String // 'biometric' | 'paper'
-  licenseIssuedPlace String
-  photoUrl           String? // path to uploaded image
-  licenseFrontUrl    String?
-  licenseBackUrl     String?
-  companyId          String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  Company            Company  @relation(fields: [companyId], references: [id])
+model Employee {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  nationalId   String   @db.Char(18)
+  dateOfBirth  DateTime
+  placeOfBirth String
+  photos       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Reverse relations
+  diagnosesAssignedTo         Diagnosis[]        @relation("DiagnosisAssignedTo")
+  diagnosesAssignedBy         Diagnosis[]        @relation("DiagnosisAssignedBy")
+  fabricationOrdersAssignedTo FabricationOrder[] @relation("FabricationOrderAssignedTo")
+  fabricationOrdersAssignedBy FabricationOrder[] @relation("FabricationOrderAssignedBy")
+  executionOrdersAssignedTo   ExecutionOrder[]   @relation("ExecutionOrderAssignedTo")
+  executionOrdersAssignedBy   ExecutionOrder[]   @relation("ExecutionOrderAssignedBy")
+  Quotation                   Quotation[]
+}
+
+model Patient {
+  id                   String      @id @default(uuid())
+  firstName            String
+  lastName             String
+  nationalId           String      @db.Char(18)
+  socialSecurityNumber String      @db.Char(15)
+  insuranceType        String
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  Quotation            Quotation[]
+}
+
+model Device {
+  id             String           @id @default(uuid())
+  name           String
+  type           String
+  reference      String
+  components     String[] // Array of component names or IDs
+  price          Float
+  photos         String[] // Array of photo URLs or paths
+  measurements   Json // Store measurements as JSON
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ExecutionOrder ExecutionOrder[]
+}
+
+enum QuotationStatus {
+  created
+  on_hold
+  medical_inspection_requested
+  medical_diagnosis_completed
+  measurements_requested
+  measurements_completed
+  order_fabrication_created
+  materials_prepared
+  order_execution_created
+  execution_started
+  execution_in_progress
+  machine_produced
+  ready_to_ship
+  patient_notified
+  prise_en_charge_present
+  submitted
+  paid
+}
+
+model Quotation {
+  id               String            @id @default(uuid())
+  patient          Patient           @relation(fields: [patientId], references: [id])
+  patientId        String
+  createdBy        Employee          @relation(fields: [createdById], references: [id])
+  createdById      String
+  status           QuotationStatus   @default(created)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  Diagnosis        Diagnosis?
+  FabricationOrder FabricationOrder?
+  ExecutionOrder   ExecutionOrder[]
+  FinalizedDevice  FinalizedDevice?
+}
+
+model Diagnosis {
+  id                 String    @id @default(uuid())
+  quotation          Quotation @relation(fields: [quotationId], references: [id])
+  quotationId        String    @unique
+  report             String // long text
+  medicalDevice      String
+  photos             String[]
+  patientTestimonial String?
+  assignedTo         Employee? @relation("DiagnosisAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId       String?
+  assignedAt         DateTime?
+  assignedBy         Employee? @relation("DiagnosisAssignedBy", fields: [assignedById], references: [id])
+  assignedById       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+enum FabricationOrderStatus {
+  created
+  assigned
+  deleted
+}
+
+model FabricationOrder {
+  id           String                 @id @default(uuid())
+  quotation    Quotation              @relation(fields: [quotationId], references: [id])
+  quotationId  String                 @unique
+  assignedTo   Employee?              @relation("FabricationOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedAt   DateTime?
+  assignedBy   Employee?              @relation("FabricationOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedById String?
+  status       FabricationOrderStatus @default(created)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+enum ExecutionOrderStatus {
+  created
+  assigned
+  finished
+  ready_to_be_shipped
+  shipped
+}
+
+model Component {
+  id                       String                     @id @default(uuid())
+  name                     String
+  type                     String
+  price                    Float
+  executionOrderComponents ExecutionOrderComponents[]
+}
+
+model ExecutionOrderComponents {
+  id               String         @id @default(uuid())
+  executionOrder   ExecutionOrder @relation(fields: [executionOrderId], references: [id])
+  executionOrderId String
+  component        Component      @relation(fields: [componentId], references: [id])
+  componentId      String
+  quantity         Int
+
+  @@unique([executionOrderId, componentId])
+}
+
+model ExecutionOrder {
+  id           String                     @id @default(uuid())
+  quotation    Quotation                  @relation(fields: [quotationId], references: [id])
+  quotationId  String
+  device       Device                     @relation(fields: [deviceId], references: [id])
+  deviceId     String
+  components   ExecutionOrderComponents[]
+  eta          DateTime?
+  assignedTo   Employee?                  @relation("ExecutionOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedBy   Employee?                  @relation("ExecutionOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedById String?
+  assignedAt   DateTime
+  status       ExecutionOrderStatus       @default(created)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+}
+
+model FinalizedDevice {
+  id           String    @id @default(uuid())
+  quotation    Quotation @relation(fields: [quotationId], references: [id])
+  quotationId  String    @unique
+  photos       String[] // Array of photo URLs or paths
+  serialNumber Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Notification {
+  id         Int                     @id @default(autoincrement())
+  message    String
+  createdAt  DateTime                @default(now())
+  recipients NotificationRecipient[]
+}
+
+model NotificationRecipient {
+  notificationId Int
+  userId         Int
+  acknowledged   Boolean      @default(false)
+  notification   Notification @relation(fields: [notificationId], references: [id])
+
+  @@id([notificationId, userId])
+}
+
+model UserGroup {
+  userId    Int    @id
+  groupName String
 }

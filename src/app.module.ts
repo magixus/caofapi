@@ -5,7 +5,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
-import { DriversModule } from './drivers/drivers.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -17,7 +16,6 @@ import { ConfigModule } from '@nestjs/config';
     AuthModule,
     RolesModule,
     PermissionsModule,
-    DriversModule,
   ],
   controllers: [AppController],
   providers: [AppService],
