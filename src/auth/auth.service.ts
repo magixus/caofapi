@@ -3,9 +3,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -14,17 +14,13 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signup(email: string, password: string, companyName: string) {
+  async signup(email: string, password: string) {
     const hashed = await bcrypt.hash(password, 10);
-    const company = await this.prisma.company.create({
-      data: { name: companyName },
-    });
 
     const user = await this.prisma.user.create({
       data: {
         email,
         password: hashed,
-        companyId: company.id,
         isSuperAdmin: false,
       },
     });
@@ -38,7 +34,7 @@ export class AuthService {
       include: { roles: { include: { role: true } } },
     });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     return this.generateTokens(user);
@@ -50,7 +46,6 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      companyId: user.companyId,
       roles,
       isSuperAdmin: user.isSuperAdmin,
     };

@@ -4,6 +4,16 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "plugins": ["@nestjs/swagger"]
+    "assets": [
+      {
+        "include": "data.json",
+        "outDir": "./dist"
+      }
+    ],
+    "watchAssets": true,
+    "plugins": [
+      "@nestjs/swagger"
+    ]
   }
 }
+    

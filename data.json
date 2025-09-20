@@ -1,0 +1,63 @@
+{
+	"roles": [
+		{
+			"name": "admin"
+		},
+		{
+			"name": "user"
+		}
+	],
+	"permissions": [
+		{
+			"action": "create",
+			"resource": "employee"
+		},
+		{
+			"action": "read",
+			"resource": "employee"
+		},
+		{
+			"action": "update",
+			"resource": "employee"
+		},
+		{
+			"action": "delete",
+			"resource": "employee"
+		}
+	],
+	"rolePermissions": [
+		{
+			"roleName": "admin",
+			"permissionActions": [
+				"create:employee",
+				"read:employee",
+				"update:employee",
+				"delete:employee"
+			]
+		},
+		{
+			"roleName": "user",
+			"permissionActions": [
+				"read:employee"
+			]
+		}
+	],
+	"users": [
+		{
+			"email": "admin@example.com",
+			"password": "adminpassword",
+			"isSuperAdmin": true,
+			"roleNames": [
+				"admin"
+			]
+		},
+		{
+			"email": "user@example.com",
+			"password": "userpassword",
+			"isSuperAdmin": false,
+			"roleNames": [
+				"user"
+			]
+		}
+	]
+}

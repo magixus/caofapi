@@ -7,7 +7,4 @@ export class SignupDto {
   @IsString()
   @MinLength(6)
   password: string;
-
-  @IsString()
-  companyName: string;
 }

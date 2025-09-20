@@ -4,13 +4,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
-console.log(process.env.PORT);
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = new DocumentBuilder()
     .setTitle('GPS Auth API')
-    .setDescription('Authentication and Multi-Tenant Role-Based Access')
-    .setVersion('1.0')
+    .setDescription('Authentication, RBAC, user & center management API')
+    .setVersion('1.0.3')
     .addBearerAuth()
     .build();
 
