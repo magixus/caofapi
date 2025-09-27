@@ -94,6 +94,26 @@ model Device {
   ExecutionOrder ExecutionOrder[]
 }
 
+enum QuotationStatus { 
+  created 
+  on_hold 
+  medical_inspection_requested 
+  medical_diagnosis_completed 
+  measurements_requested 
+  measurements_completed 
+  order_fabrication_created 
+  materials_prepared 
+  order_execution_created 
+  execution_started 
+  execution_in_progress 
+  machine_produced 
+  ready_to_ship
+  patient_notified
+  prise_en_charge_present
+  submitted
+  paid 
+}
+
 model Quotation {
   id               String            @id @default(uuid())
   patient          Patient           @relation(fields: [patientId], references: [id])
