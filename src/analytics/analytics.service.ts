@@ -17,7 +17,7 @@ export class AnalyticsService {
           include: { patient: true },
         }).then(quotations => {
           const grouped = quotations.reduce((acc, q) => {
-            const type = q.patient.insuranceType;
+            const type = q.patient.insuranceType || 'None';
             acc[type] = (acc[type] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);

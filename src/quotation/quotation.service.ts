@@ -12,14 +12,56 @@ export class QuotationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Generate sequential quotation code in format: CA-YYYYMM0000000001
+   * Example: CA-202501000000001 (January 2025, sequence 1)
+   */
+  private async generateQuotationCode(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `CA-${year}${month}`;
+
+    // Find the last quotation for this year-month
+    const lastQuotation = await this.prisma.quotation.findFirst({
+      where: {
+        code: {
+          startsWith: prefix,
+        },
+      },
+      orderBy: {
+        code: 'desc',
+      },
+    });
+
+    let sequence = 1;
+    if (lastQuotation && lastQuotation.code) {
+      // Extract the last 10 digits and increment
+      const lastSequence = parseInt(lastQuotation.code.slice(-10), 10);
+      sequence = lastSequence + 1;
+    }
+
+    // Format: CA-YYYYMM0000000001 (10 digits for sequence)
+    const sequenceStr = String(sequence).padStart(10, '0');
+    const code = `${prefix}${sequenceStr}`;
+    
+    this.logger.log(`Generated quotation code: ${code}`);
+    return code;
+  }
+
   async create(
     createQuotationDto: CreateQuotationDto,
-    createdById: string,
+    userId: string,
   ): Promise<Quotation> {
     this.logger.log(
-      `Creating quotation for patient ID: ${createQuotationDto.patientId}`,
+      `Creating quotation for patient ID: ${createQuotationDto.patientId}, userId: ${userId}`,
     );
     try {
+      // Validate userId is provided
+      if (!userId) {
+        throw new NotFoundException('User ID is required (should come from authentication token)');
+      }
+
       // Validate patient exists
       const patient = await this.prisma.patient.findUnique({
         where: { id: createQuotationDto.patientId },
@@ -31,18 +73,57 @@ export class QuotationsService {
         );
       }
 
+      // Try to find or create employee for this user
+      let employee = await this.prisma.employee.findFirst({
+        where: {
+          // If you have a userId field in Employee, use it
+          // Otherwise, we'll need to create a default employee
+        },
+      });
+
+      // If no employee found, create a default one for this user
+      if (!employee) {
+        this.logger.log(`No employee found for user ${userId}, creating default employee`);
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+        });
+        
+        if (!user) {
+          throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        employee = await this.prisma.employee.create({
+          data: {
+            firstName: user.email.split('@')[0],
+            lastName: 'User',
+            nationalId: userId.substring(0, 18).padEnd(18, '0'),
+            dateOfBirth: new Date('1990-01-01'),
+            placeOfBirth: 'System Generated',
+          },
+        });
+        this.logger.log(`Created default employee with ID: ${employee.id}`);
+      }
+
+      // Generate sequential code
+      const code = await this.generateQuotationCode();
+
       const quotation = await this.prisma.quotation.create({
         data: {
-          patientId: createQuotationDto.patientId,
-          createdById,
-          status: createQuotationDto.status,
+          code,
+          patient: {
+            connect: { id: createQuotationDto.patientId }
+          },
+          createdBy: {
+            connect: { id: employee.id }
+          },
+          status: createQuotationDto.status || 'created',
         },
         include: {
           patient: true,
           createdBy: true,
         },
       });
-      this.logger.log(`Quotation created with ID: ${quotation.id}`);
+      this.logger.log(`Quotation created with ID: ${quotation.id}, code: ${quotation.code}`);
       return quotation;
     } catch (error) {
       this.logger.error(

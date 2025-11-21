@@ -6,13 +6,14 @@ import {
   Patch,
   Param,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DiagnosisService } from './diagnosis.service';
 import { CreateDiagnosisDto } from './dto/create-diagnosis.dto';
 import { UpdateDiagnosisDto } from './dto/update-diagnosis.dto';
 import { AssignDiagnosisDto } from './dto/assign-diagnosis.dto';
 
 @ApiTags('diagnosis')
+@ApiBearerAuth()
 @Controller('diagnosis')
 export class DiagnosisController {
   constructor(private readonly diagnosisService: DiagnosisService) {}

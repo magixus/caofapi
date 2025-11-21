@@ -27,6 +27,7 @@ model Permission {
   id              String           @id @default(uuid())
   action          String
   resource        String
+  description     String
   rolePermissions RolePermission[] 
   @@unique([action, resource], name: "action_resource") 
 }
@@ -69,15 +70,51 @@ model Employee {
 }
 
 model Patient {
-  id                   String      @id @default(uuid())
+  id                   String             @id @default(uuid())
   firstName            String
   lastName             String
-  nationalId           String      @db.Char(18)
-  socialSecurityNumber String      @db.Char(15)
-  insuranceType        String
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  email                String
+  phone                String
+  dateOfBirth          DateTime
+  gender               String             // "Male" or "Female"
+  address              String
+  city                 String
+  nationalId           String
+  socialSecurityNumber String
+  insuranceType        String?
+  bloodType            String             // A+, A-, B+, B-, AB+, AB-, O+, O-
+  allergies            String[]           @default([])
+  currentMedications   String[]           @default([])
+  emergencyContact     Json               // { name, relationship, phone }
+  documents            PatientDocument[]  // ID card, Chifa card, etc.
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   Quotation            Quotation[]
+}
+
+enum DocumentType {
+  ID_CARD
+  CHIFA_CARD
+  PRESCRIPTION
+  OTHER
+}
+
+model PatientDocument {
+  id          String       @id @default(uuid())
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId   String
+  quotation   Quotation?   @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  quotationId String?
+  type        DocumentType
+  fileName    String
+  fileUrl     String
+  fileSize    Int?
+  mimeType    String?
+  extractedData Json?      // MRZ data, OCR results, etc.
+  createdAt   DateTime     @default(now())
+  
+  @@index([patientId])
+  @@index([quotationId])
 }
 
 model Device {
@@ -115,18 +152,23 @@ enum QuotationStatus {
 }
 
 model Quotation {
-  id               String            @id @default(uuid())
-  patient          Patient           @relation(fields: [patientId], references: [id])
+  id               String             @id @default(uuid())
+  code             String             @unique // CA-YYYYMM0000000001 format
+  patient          Patient            @relation(fields: [patientId], references: [id])
   patientId        String
-  createdBy        Employee          @relation(fields: [createdById], references: [id])
+  createdBy        Employee           @relation(fields: [createdById], references: [id])
   createdById      String
-  status           QuotationStatus   @default(created)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  status           QuotationStatus    @default(created)
+  documents        PatientDocument[]  // Related documents
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   Diagnosis        Diagnosis?
   FabricationOrder FabricationOrder?
   ExecutionOrder   ExecutionOrder[]
   FinalizedDevice  FinalizedDevice?
+  
+  @@index([code])
+  @@index([createdAt])
 }
 
 model Diagnosis {
@@ -240,4 +282,39 @@ model NotificationRecipient {
 model UserGroup {
   userId    Int    @id
   groupName String
+}
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  ACCESS_DENIED
+  UNAUTHORIZED_ATTEMPT
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?     // Nullable for anonymous attempts
+  userEmail   String?
+  userRole    String?
+  action      AuditAction
+  resource    String      // e.g., "patient", "quotation", "device"
+  resourceId  String?     // ID of the affected resource
+  method      String?     // HTTP method (GET, POST, PUT, DELETE)
+  endpoint    String?     // API endpoint
+  ipAddress   String?
+  userAgent   String?
+  status      String      // success, denied, unauthorized, error
+  message     String      // Description of what happened
+  metadata    Json?       // Additional context (before/after values, etc.)
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([status])
 }

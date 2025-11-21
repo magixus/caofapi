@@ -12,8 +12,8 @@ export class PermissionsController {
   constructor(private permissionsService: PermissionsService) {}
 
   @Post()
-  create(@Body() body: { action: string; resource: string }) {
-    return this.permissionsService.createPermission(body.action, body.resource);
+  create(@Body() body: { action: string; resource: string; description: string }) {
+    return this.permissionsService.createPermission(body.action, body.resource, body.description);
   }
 
   @Post('assign')

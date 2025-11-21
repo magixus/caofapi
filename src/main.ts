@@ -6,6 +6,15 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // Enable CORS
+  app.enableCors({
+    origin: true, // Allow all origins in development (configure for production)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
+
   const config = new DocumentBuilder()
     .setTitle('GPS Auth API')
     .setDescription('Authentication, RBAC, user & center management API')

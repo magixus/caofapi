@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -22,6 +23,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SearchModule } from './search/search.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { AuditModule } from './audit/audit.module';
+import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -29,6 +33,8 @@ import { UploadsModule } from './uploads/uploads.module';
       isGlobal: true,
     }),
     PrismaModule,
+    CommonModule,
+    AuditModule,
     AuthModule,
     RolesModule,
     PermissionsModule,
@@ -50,6 +56,12 @@ import { UploadsModule } from './uploads/uploads.module';
     UploadsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {}

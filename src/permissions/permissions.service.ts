@@ -9,8 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PermissionsService {
   constructor(private prisma: PrismaService) {}
 
-  createPermission(action: string, resource: string) {
-    return this.prisma.permission.create({ data: { action, resource } });
+  createPermission(action: string, resource: string, description: string) {
+    return this.prisma.permission.create({ data: { action, resource, description } });
   }
 
   assignPermissionToRole(permissionId: string, roleId: string) {

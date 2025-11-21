@@ -13,6 +13,7 @@ interface SeedPermission {
   id?: string; // Optional since it’s generated in create
   action: string;
   resource: string;
+  description: string;
 }
 
 interface SeedRole {
@@ -64,6 +65,7 @@ export class SeederService implements OnModuleInit {
         id: string;
         action: string;
         resource: string;
+        description: string;
       }[] = [];
       for (const permission of seedData.permissions) {
         const record = await this.prisma.permission.upsert({
@@ -73,11 +75,14 @@ export class SeederService implements OnModuleInit {
               resource: permission.resource,
             },
           },
-          update: {},
+          update: {
+            description: permission.description,
+          },
           create: {
             id: uuidv4(),
             action: permission.action,
             resource: permission.resource,
+            description: permission.description,
           },
         });
         permissionRecords.push(record);
@@ -121,13 +126,23 @@ export class SeederService implements OnModuleInit {
             })
             .filter((p) => p); // Filter out undefined permissions
 
-          await this.prisma.rolePermission.createMany({
-            data: permissionsToConnect.map((permission) => ({
-              id: uuidv4(),
-              roleId: role.id,
-              permissionId: permission!.id,
-            })),
-          });
+          // Create role-permission associations
+          for (const permission of permissionsToConnect) {
+            try {
+              await this.prisma.rolePermission.create({
+                data: {
+                  id: uuidv4(),
+                  roleId: role.id,
+                  permissionId: permission!.id,
+                },
+              });
+            } catch (error) {
+              // Ignore duplicate key errors (relationship already exists)
+              if (!error.code || error.code !== 'P2002') {
+                throw error;
+              }
+            }
+          }
         }
       }
 
@@ -149,30 +164,49 @@ export class SeederService implements OnModuleInit {
           .map((roleName) => roleRecords.find((r) => r.name === roleName))
           .filter((r): r is { id: string; name: string } => !!r); // Type guard to filter out undefined roles
 
-        await this.prisma.user.upsert({
+        // Check if user exists
+        const existingUser = await this.prisma.user.findUnique({
           where: { email: user.email },
-          update: {
-            isSuperAdmin: user.isSuperAdmin,
-            roles: {
-              create: rolesToConnect.map((role) => ({
-                id: uuidv4(),
-                roleId: role.id,
-              })),
-            },
-          },
-          create: {
-            id: uuidv4(),
-            email: user.email,
-            password: hashedPassword,
-            isSuperAdmin: user.isSuperAdmin,
-            roles: {
-              create: rolesToConnect.map((role) => ({
-                id: uuidv4(),
-                roleId: role.id,
-              })),
-            },
-          },
+          include: { roles: true },
         });
+
+        if (existingUser) {
+          // Delete existing user roles first
+          await this.prisma.userRole.deleteMany({
+            where: { userId: existingUser.id },
+          });
+
+          // Update user and create new role associations
+          await this.prisma.user.update({
+            where: { email: user.email },
+            data: {
+              isSuperAdmin: user.isSuperAdmin,
+              password: hashedPassword,
+              roles: {
+                create: rolesToConnect.map((role) => ({
+                  id: uuidv4(),
+                  roleId: role.id,
+                })),
+              },
+            },
+          });
+        } else {
+          // Create new user with roles
+          await this.prisma.user.create({
+            data: {
+              id: uuidv4(),
+              email: user.email,
+              password: hashedPassword,
+              isSuperAdmin: user.isSuperAdmin,
+              roles: {
+                create: rolesToConnect.map((role) => ({
+                  id: uuidv4(),
+                  roleId: role.id,
+                })),
+              },
+            },
+          });
+        }
       }
 
       this.logger.log('Seeding completed successfully from JSON file');

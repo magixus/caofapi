@@ -1,63 +1,218 @@
 {
-	"roles": [
-		{
-			"name": "admin"
-		},
-		{
-			"name": "user"
-		}
-	],
-	"permissions": [
-		{
-			"action": "create",
-			"resource": "employee"
-		},
-		{
-			"action": "read",
-			"resource": "employee"
-		},
-		{
-			"action": "update",
-			"resource": "employee"
-		},
-		{
-			"action": "delete",
-			"resource": "employee"
-		}
-	],
-	"rolePermissions": [
-		{
-			"roleName": "admin",
-			"permissionActions": [
-				"create:employee",
-				"read:employee",
-				"update:employee",
-				"delete:employee"
-			]
-		},
-		{
-			"roleName": "user",
-			"permissionActions": [
-				"read:employee"
-			]
-		}
-	],
-	"users": [
-		{
-			"email": "admin@example.com",
-			"password": "adminpassword",
-			"isSuperAdmin": true,
-			"roleNames": [
-				"admin"
-			]
-		},
-		{
-			"email": "user@example.com",
-			"password": "userpassword",
-			"isSuperAdmin": false,
-			"roleNames": [
-				"user"
-			]
-		}
-	]
+  "roles": [
+    {
+      "name": "admin"
+    },
+    {
+      "name": "receptionist"
+    },
+    {
+      "name": "doctor"
+    },
+    {
+      "name": "technician"
+    },
+    {
+      "name": "user"
+    }
+  ],
+  "permissions": [
+    {"action": "create", "resource": "patient", "description": "Create new patient records"},
+    {"action": "read", "resource": "patient", "description": "View patient information and medical history"},
+    {"action": "update", "resource": "patient", "description": "Modify existing patient records"},
+    {"action": "delete", "resource": "patient", "description": "Remove patient records from the system"},
+    
+    {"action": "create", "resource": "employee", "description": "Add new employees to the system"},
+    {"action": "read", "resource": "employee", "description": "View employee information and profiles"},
+    {"action": "update", "resource": "employee", "description": "Update employee details and assignments"},
+    {"action": "delete", "resource": "employee", "description": "Remove employees from the system"},
+    
+    {"action": "create", "resource": "device", "description": "Register new orthopedic devices"},
+    {"action": "read", "resource": "device", "description": "View device specifications and inventory"},
+    {"action": "update", "resource": "device", "description": "Modify device information and pricing"},
+    {"action": "delete", "resource": "device", "description": "Remove devices from the catalog"},
+    
+    {"action": "create", "resource": "component", "description": "Add new device components to inventory"},
+    {"action": "read", "resource": "component", "description": "View component details and availability"},
+    {"action": "update", "resource": "component", "description": "Update component specifications and pricing"},
+    {"action": "delete", "resource": "component", "description": "Remove components from inventory"},
+    
+    {"action": "create", "resource": "quotation", "description": "Create new quotations for patients"},
+    {"action": "read", "resource": "quotation", "description": "View quotation details and status"},
+    {"action": "update", "resource": "quotation", "description": "Modify quotation information and progress status"},
+    {"action": "delete", "resource": "quotation", "description": "Cancel and remove quotations"},
+    
+    {"action": "create", "resource": "diagnosis", "description": "Create medical diagnosis reports"},
+    {"action": "read", "resource": "diagnosis", "description": "View patient diagnosis and medical reports"},
+    {"action": "update", "resource": "diagnosis", "description": "Update diagnosis information and recommendations"},
+    {"action": "delete", "resource": "diagnosis", "description": "Remove diagnosis records"},
+    
+    {"action": "create", "resource": "fabrication-order", "description": "Create new fabrication orders"},
+    {"action": "read", "resource": "fabrication-order", "description": "View fabrication order details and status"},
+    {"action": "update", "resource": "fabrication-order", "description": "Update fabrication order progress and assignments"},
+    {"action": "delete", "resource": "fabrication-order", "description": "Cancel fabrication orders"},
+    
+    {"action": "create", "resource": "execution-order", "description": "Create device execution orders"},
+    {"action": "read", "resource": "execution-order", "description": "View execution order details and components"},
+    {"action": "update", "resource": "execution-order", "description": "Update execution order status and assignments"},
+    {"action": "delete", "resource": "execution-order", "description": "Cancel execution orders"},
+    
+    {"action": "create", "resource": "finalized-device", "description": "Register completed devices"},
+    {"action": "read", "resource": "finalized-device", "description": "View finalized device information and photos"},
+    {"action": "update", "resource": "finalized-device", "description": "Update finalized device details"},
+    {"action": "delete", "resource": "finalized-device", "description": "Remove finalized device records"},
+    
+    {"action": "create", "resource": "notification", "description": "Create system notifications"},
+    {"action": "read", "resource": "notification", "description": "View notifications and alerts"},
+    {"action": "update", "resource": "notification", "description": "Mark notifications as read or acknowledged"},
+    {"action": "delete", "resource": "notification", "description": "Remove notifications"},
+    
+    {"action": "create", "resource": "role", "description": "Create new user roles"},
+    {"action": "read", "resource": "role", "description": "View role definitions and permissions"},
+    {"action": "update", "resource": "role", "description": "Modify role permissions and settings"},
+    {"action": "delete", "resource": "role", "description": "Remove roles from the system"},
+    
+    {"action": "create", "resource": "permission", "description": "Define new system permissions"},
+    {"action": "read", "resource": "permission", "description": "View available permissions"},
+    {"action": "update", "resource": "permission", "description": "Modify permission definitions"},
+    {"action": "delete", "resource": "permission", "description": "Remove permissions from the system"},
+    
+    {"action": "read", "resource": "dashboard", "description": "Access the main dashboard and overview"},
+    {"action": "read", "resource": "analytics", "description": "View analytics, reports, and statistics"},
+    {"action": "read", "resource": "search", "description": "Search across all system resources"},
+    
+    {"action": "create", "resource": "upload", "description": "Upload files, images, and documents"},
+    {"action": "read", "resource": "upload", "description": "View and download uploaded files"},
+    {"action": "delete", "resource": "upload", "description": "Remove uploaded files"},
+    
+    {"action": "manage", "resource": "workflow", "description": "Manage and control quotation workflow progression"},
+    {"action": "read", "resource": "workflow", "description": "View workflow status and history"},
+    
+    {"action": "read", "resource": "audit", "description": "View system audit logs and activity"},
+    {"action": "create", "resource": "audit", "description": "Create audit log entries"}
+  ],
+  "rolePermissions": [
+    {
+      "roleName": "admin",
+      "permissionActions": [
+        "create:patient", "read:patient", "update:patient", "delete:patient",
+        "create:employee", "read:employee", "update:employee", "delete:employee",
+        "create:device", "read:device", "update:device", "delete:device",
+        "create:component", "read:component", "update:component", "delete:component",
+        "create:quotation", "read:quotation", "update:quotation", "delete:quotation",
+        "create:diagnosis", "read:diagnosis", "update:diagnosis", "delete:diagnosis",
+        "create:fabrication-order", "read:fabrication-order", "update:fabrication-order", "delete:fabrication-order",
+        "create:execution-order", "read:execution-order", "update:execution-order", "delete:execution-order",
+        "create:finalized-device", "read:finalized-device", "update:finalized-device", "delete:finalized-device",
+        "create:notification", "read:notification", "update:notification", "delete:notification",
+        "create:role", "read:role", "update:role", "delete:role",
+        "create:permission", "read:permission", "update:permission", "delete:permission",
+        "read:dashboard", "read:analytics", "read:search",
+        "create:upload", "read:upload", "delete:upload",
+        "manage:workflow", "read:workflow",
+        "read:audit", "create:audit"
+      ]
+    },
+    {
+      "roleName": "receptionist",
+      "permissionActions": [
+        "create:patient", "read:patient", "update:patient",
+        "read:employee",
+        "read:device", "read:component",
+        "create:quotation", "read:quotation", "update:quotation",
+        "read:diagnosis",
+        "read:fabrication-order",
+        "read:execution-order",
+        "read:finalized-device",
+        "read:notification", "update:notification",
+        "read:dashboard", "read:search",
+        "create:upload", "read:upload",
+        "read:workflow"
+      ]
+    },
+    {
+      "roleName": "doctor",
+      "permissionActions": [
+        "read:patient", "update:patient",
+        "read:employee",
+        "read:device", "read:component",
+        "read:quotation", "update:quotation",
+        "create:diagnosis", "read:diagnosis", "update:diagnosis",
+        "read:fabrication-order",
+        "read:execution-order",
+        "read:finalized-device",
+        "read:notification", "update:notification",
+        "read:dashboard", "read:analytics", "read:search",
+        "create:upload", "read:upload",
+        "manage:workflow", "read:workflow"
+      ]
+    },
+    {
+      "roleName": "technician",
+      "permissionActions": [
+        "read:patient",
+        "read:employee",
+        "read:device", "update:device",
+        "read:component", "update:component",
+        "read:quotation",
+        "read:diagnosis",
+        "create:fabrication-order", "read:fabrication-order", "update:fabrication-order",
+        "create:execution-order", "read:execution-order", "update:execution-order",
+        "create:finalized-device", "read:finalized-device", "update:finalized-device",
+        "read:notification", "update:notification",
+        "read:dashboard", "read:search",
+        "create:upload", "read:upload",
+        "read:workflow"
+      ]
+    },
+    {
+      "roleName": "user",
+      "permissionActions": [
+        "read:patient",
+        "read:employee",
+        "read:device",
+        "read:component",
+        "read:quotation",
+        "read:diagnosis",
+        "read:fabrication-order",
+        "read:execution-order",
+        "read:finalized-device",
+        "read:notification",
+        "read:dashboard",
+        "read:search"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "email": "admin@example.com",
+      "password": "adminpassword",
+      "isSuperAdmin": true,
+      "roleNames": ["admin"]
+    },
+    {
+      "email": "receptionist@example.com",
+      "password": "receptionist123",
+      "isSuperAdmin": false,
+      "roleNames": ["receptionist"]
+    },
+    {
+      "email": "doctor@example.com",
+      "password": "doctor123",
+      "isSuperAdmin": false,
+      "roleNames": ["doctor"]
+    },
+    {
+      "email": "technician@example.com",
+      "password": "technician123",
+      "isSuperAdmin": false,
+      "roleNames": ["technician"]
+    },
+    {
+      "email": "user@example.com",
+      "password": "userpassword",
+      "isSuperAdmin": false,
+      "roleNames": ["user"]
+    }
+  ]
 }

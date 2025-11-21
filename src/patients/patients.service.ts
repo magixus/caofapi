@@ -13,8 +13,16 @@ export class PatientsService {
   async create(createPatientDto: CreatePatientDto): Promise<Patient> {
     this.logger.log(`Creating patient: ${createPatientDto.firstName} ${createPatientDto.lastName}`);
     try {
+      const { allergies, currentMedications, emergencyContact, ...patientData } = createPatientDto;
+      
       const patient = await this.prisma.patient.create({
-        data: createPatientDto,
+        data: {
+          ...patientData,
+          allergies: allergies || [],
+          currentMedications: currentMedications || [],
+          emergencyContact: emergencyContact as any, // Store as JSON
+          dateOfBirth: new Date(createPatientDto.dateOfBirth),
+        },
       });
       this.logger.log(`Patient created with ID: ${patient.id}`);
       return patient;
@@ -35,6 +43,8 @@ export class PatientsService {
               { lastName: { contains: search, mode: 'insensitive' as const } },
               { nationalId: { contains: search, mode: 'insensitive' as const } },
               { socialSecurityNumber: { contains: search, mode: 'insensitive' as const } },
+              { email: { contains: search, mode: 'insensitive' as const } },
+              { phone: { contains: search, mode: 'insensitive' as const } },
             ],
           }
         : {};
@@ -93,9 +103,21 @@ export class PatientsService {
         throw new NotFoundException(`Patient with ID ${id} not found`);
       }
 
+      // Handle nested objects and date conversion
+      const { emergencyContact, dateOfBirth, ...patientData } = updatePatientDto as any;
+      const updateData: any = { ...patientData };
+      
+      if (emergencyContact) {
+        updateData.emergencyContact = emergencyContact; // Store as JSON
+      }
+      
+      if (dateOfBirth) {
+        updateData.dateOfBirth = new Date(dateOfBirth);
+      }
+
       const updatedPatient = await this.prisma.patient.update({
         where: { id },
-        data: updatePatientDto,
+        data: updateData,
       });
 
       this.logger.log(`Patient updated: ${id}`);
