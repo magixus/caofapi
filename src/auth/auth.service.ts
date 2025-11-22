@@ -57,4 +57,52 @@ export class AuthService {
       }),
     };
   }
+
+  async getAuthenticatedUserDetails(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { 
+        roles: { include: { role: true } },
+        doctor: true,
+        receptionist: true,
+        applicator: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const roles = user.roles?.map((r: any) => r.role.name) || [];
+
+    // Determine profile type and data
+    let profile: any = null;
+    let profileType: string | null = null;
+
+    if (user.doctor) {
+      profileType = 'doctor';
+      const { userId: _, updatedAt, ...doctorData } = user.doctor;
+      profile = doctorData;
+    } else if (user.receptionist) {
+      profileType = 'receptionist';
+      const { userId: _, updatedAt, ...receptionistData } = user.receptionist;
+      profile = receptionistData;
+    } else if (user.applicator) {
+      profileType = 'applicator';
+      const { userId: _, updatedAt, ...applicatorData } = user.applicator;
+      profile = applicatorData;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      roles,
+      isSuperAdmin: user.isSuperAdmin,
+      createdAt: user.createdAt,
+      profile: profile ? {
+        type: profileType,
+        ...profile,
+      } : null,
+    };
+  }
 }
