@@ -134,6 +134,10 @@ export class QuotationsService {
     }
   }
 
+  async count(): Promise<number> {
+    return await this.prisma.quotation.count();
+  }
+
   async findAll(): Promise<Quotation[]> {
     this.logger.log('Fetching all quotations');
     try {

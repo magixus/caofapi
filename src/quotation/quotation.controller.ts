@@ -42,6 +42,11 @@ export class QuotationController {
     return this.quotationService.create(createQuotationDto, createdById);
   }
 
+  @Get('count')
+  count() {
+    return this.quotationService.count();
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all quotations' })
   @ApiResponse({ 
