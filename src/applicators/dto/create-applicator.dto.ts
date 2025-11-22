@@ -1,16 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsDateString, IsEnum, IsNotEmpty, IsInt, Min } from 'class-validator';
-import { EmployeeStatus } from '@prisma/client';
+import { IsString, IsEmail, IsEnum, IsDateString, IsOptional, IsInt, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateApplicatorDto {
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   firstName: string;
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   lastName: string;
 
   @ApiProperty()
@@ -19,22 +16,14 @@ export class CreateApplicatorDto {
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
   phone: string;
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   specialization: string;
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   certificationNumber: string;
 
   @ApiProperty()
@@ -42,30 +31,32 @@ export class CreateApplicatorDto {
   dateOfBirth: string;
 
   @ApiProperty({ enum: ['Male', 'Female'] })
-  @IsString()
-  @IsNotEmpty()
+  @IsEnum(['Male', 'Female'])
   gender: 'Male' | 'Female';
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   address: string;
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   city: string;
 
   @ApiProperty()
   @IsDateString()
   hireDate: string;
 
-  @ApiProperty()
+  @ApiProperty({ minimum: 0 })
   @IsInt()
   @Min(0)
   experienceYears: number;
 
-  @ApiProperty({ enum: EmployeeStatus, default: EmployeeStatus.active })
-  @IsEnum(EmployeeStatus)
-  status?: EmployeeStatus;
+  @ApiPropertyOptional({ enum: ['active', 'inactive', 'on_leave'], default: 'active' })
+  @IsOptional()
+  @IsEnum(['active', 'inactive', 'on_leave'])
+  status?: 'active' | 'inactive' | 'on_leave';
+
+  @ApiProperty({ description: 'Password for the user account' })
+  @IsString()
+  password: string;
 }

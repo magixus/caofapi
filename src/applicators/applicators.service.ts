@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ApplicatorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createApplicatorDto: CreateApplicatorDto) {
     // Check if email already exists
@@ -28,34 +28,34 @@ export class ApplicatorsService {
     // Hash password
     const hashedPassword = await bcrypt.hash(createApplicatorDto.password, 10);
 
-    // Get technician role (applicators use technician role)
-    const technicianRole = await this.prisma.role.findUnique({
-      where: { name: 'technician' },
+    // Get applicator role
+    const applicatorRole = await this.prisma.role.findUnique({
+      where: { name: 'applicator' },
     });
-    if (!technicianRole) {
-      throw new NotFoundException('Technician role not found');
+    if (!applicatorRole) {
+      throw new NotFoundException('Applicator role not found');
     }
 
-    // Create user and applicator in a transaction
-    const result = await this.prisma.$transaction(async (prisma) => {
+    // Create user and applicator in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
       // Create user
-      const user = await prisma.user.create({
+      const user = await tx.user.create({
         data: {
           email: createApplicatorDto.email,
           password: hashedPassword,
         },
       });
 
-      // Assign technician role to user
-      await prisma.userRole.create({
+      // Assign applicator role
+      await tx.userRole.create({
         data: {
           userId: user.id,
-          roleId: technicianRole.id,
+          roleId: applicatorRole.id,
         },
       });
 
       // Create applicator profile
-      const applicator = await prisma.applicator.create({
+      const applicator = await tx.applicator.create({
         data: {
           userId: user.id,
           firstName: createApplicatorDto.firstName,
@@ -72,54 +72,32 @@ export class ApplicatorsService {
           experienceYears: createApplicatorDto.experienceYears,
           status: createApplicatorDto.status || 'active',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              createdAt: true,
-            },
-          },
-        },
       });
 
       return applicator;
     });
 
-    return result;
+    // Remove userId from response
+    const { userId, ...applicatorData } = result;
+    return applicatorData;
   }
 
   async findAll() {
-    return this.prisma.applicator.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    const applicators = await this.prisma.applicator.findMany({
+      orderBy: { createdAt: 'desc' },
     });
+    return applicators.map(({ userId, ...applicator }) => applicator);
   }
 
   async findOne(id: string) {
     const applicator = await this.prisma.applicator.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
     });
     if (!applicator) {
       throw new NotFoundException(`Applicator with ID ${id} not found`);
     }
-    return applicator;
+    const { userId, ...applicatorData } = applicator;
+    return applicatorData;
   }
 
   async update(id: string, updateApplicatorDto: UpdateApplicatorDto) {
@@ -130,8 +108,18 @@ export class ApplicatorsService {
       throw new NotFoundException(`Applicator with ID ${id} not found`);
     }
 
-    // Check if certification number is being updated and if it already exists
-    if (updateApplicatorDto.certificationNumber) {
+    // Check if email is being changed and already exists
+    if (updateApplicatorDto.email && updateApplicatorDto.email !== applicator.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: updateApplicatorDto.email },
+      });
+      if (existingUser && existingUser.id !== applicator.userId) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Check if certification number is being changed and already exists
+    if (updateApplicatorDto.certificationNumber && updateApplicatorDto.certificationNumber !== applicator.certificationNumber) {
       const existingApplicator = await this.prisma.applicator.findUnique({
         where: { certificationNumber: updateApplicatorDto.certificationNumber },
       });
@@ -140,32 +128,46 @@ export class ApplicatorsService {
       }
     }
 
-    return this.prisma.applicator.update({
-      where: { id },
-      data: {
-        firstName: updateApplicatorDto.firstName,
-        lastName: updateApplicatorDto.lastName,
-        phone: updateApplicatorDto.phone,
-        specialization: updateApplicatorDto.specialization,
-        certificationNumber: updateApplicatorDto.certificationNumber,
-        dateOfBirth: updateApplicatorDto.dateOfBirth ? new Date(updateApplicatorDto.dateOfBirth) : undefined,
-        gender: updateApplicatorDto.gender,
-        address: updateApplicatorDto.address,
-        city: updateApplicatorDto.city,
-        hireDate: updateApplicatorDto.hireDate ? new Date(updateApplicatorDto.hireDate) : undefined,
-        experienceYears: updateApplicatorDto.experienceYears,
-        status: updateApplicatorDto.status,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Update user if email or password changed
+      if (updateApplicatorDto.email || updateApplicatorDto.password) {
+        const userData: any = {};
+        if (updateApplicatorDto.email) {
+          userData.email = updateApplicatorDto.email;
+        }
+        if (updateApplicatorDto.password) {
+          userData.password = await bcrypt.hash(updateApplicatorDto.password, 10);
+        }
+        await tx.user.update({
+          where: { id: applicator.userId },
+          data: userData,
+        });
+      }
+
+      // Update applicator profile
+      const updateData: any = {};
+      if (updateApplicatorDto.firstName) updateData.firstName = updateApplicatorDto.firstName;
+      if (updateApplicatorDto.lastName) updateData.lastName = updateApplicatorDto.lastName;
+      if (updateApplicatorDto.email) updateData.email = updateApplicatorDto.email;
+      if (updateApplicatorDto.phone) updateData.phone = updateApplicatorDto.phone;
+      if (updateApplicatorDto.specialization) updateData.specialization = updateApplicatorDto.specialization;
+      if (updateApplicatorDto.certificationNumber) updateData.certificationNumber = updateApplicatorDto.certificationNumber;
+      if (updateApplicatorDto.dateOfBirth) updateData.dateOfBirth = new Date(updateApplicatorDto.dateOfBirth);
+      if (updateApplicatorDto.gender) updateData.gender = updateApplicatorDto.gender;
+      if (updateApplicatorDto.address) updateData.address = updateApplicatorDto.address;
+      if (updateApplicatorDto.city) updateData.city = updateApplicatorDto.city;
+      if (updateApplicatorDto.hireDate) updateData.hireDate = new Date(updateApplicatorDto.hireDate);
+      if (updateApplicatorDto.experienceYears !== undefined) updateData.experienceYears = updateApplicatorDto.experienceYears;
+      if (updateApplicatorDto.status) updateData.status = updateApplicatorDto.status;
+
+      return await tx.applicator.update({
+        where: { id },
+        data: updateData,
+      });
     });
+
+    const { userId, ...applicatorData } = result;
+    return applicatorData;
   }
 
   async remove(id: string) {
@@ -176,8 +178,9 @@ export class ApplicatorsService {
       throw new NotFoundException(`Applicator with ID ${id} not found`);
     }
 
-    await this.prisma.applicator.delete({
-      where: { id },
+    // Delete user (cascade will delete applicator profile)
+    await this.prisma.user.delete({
+      where: { id: applicator.userId },
     });
 
     return { message: 'Applicator deleted successfully' };

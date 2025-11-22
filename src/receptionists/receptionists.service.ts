@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ReceptionistsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createReceptionistDto: CreateReceptionistDto) {
     // Check if email already exists
@@ -28,18 +28,18 @@ export class ReceptionistsService {
       throw new NotFoundException('Receptionist role not found');
     }
 
-    // Create user and receptionist in a transaction
-    const result = await this.prisma.$transaction(async (prisma) => {
+    // Create user and receptionist in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
       // Create user
-      const user = await prisma.user.create({
+      const user = await tx.user.create({
         data: {
           email: createReceptionistDto.email,
           password: hashedPassword,
         },
       });
 
-      // Assign receptionist role to user
-      await prisma.userRole.create({
+      // Assign receptionist role
+      await tx.userRole.create({
         data: {
           userId: user.id,
           roleId: receptionistRole.id,
@@ -47,7 +47,7 @@ export class ReceptionistsService {
       });
 
       // Create receptionist profile
-      const receptionist = await prisma.receptionist.create({
+      const receptionist = await tx.receptionist.create({
         data: {
           userId: user.id,
           firstName: createReceptionistDto.firstName,
@@ -62,54 +62,32 @@ export class ReceptionistsService {
           shift: createReceptionistDto.shift,
           status: createReceptionistDto.status || 'active',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              createdAt: true,
-            },
-          },
-        },
       });
 
       return receptionist;
     });
 
-    return result;
+    // Remove userId from response
+    const { userId, ...receptionistData } = result;
+    return receptionistData;
   }
 
   async findAll() {
-    return this.prisma.receptionist.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    const receptionists = await this.prisma.receptionist.findMany({
+      orderBy: { createdAt: 'desc' },
     });
+    return receptionists.map(({ userId, ...receptionist }) => receptionist);
   }
 
   async findOne(id: string) {
     const receptionist = await this.prisma.receptionist.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
     });
     if (!receptionist) {
       throw new NotFoundException(`Receptionist with ID ${id} not found`);
     }
-    return receptionist;
+    const { userId, ...receptionistData } = receptionist;
+    return receptionistData;
   }
 
   async update(id: string, updateReceptionistDto: UpdateReceptionistDto) {
@@ -120,30 +98,54 @@ export class ReceptionistsService {
       throw new NotFoundException(`Receptionist with ID ${id} not found`);
     }
 
-    return this.prisma.receptionist.update({
-      where: { id },
-      data: {
-        firstName: updateReceptionistDto.firstName,
-        lastName: updateReceptionistDto.lastName,
-        phone: updateReceptionistDto.phone,
-        dateOfBirth: updateReceptionistDto.dateOfBirth ? new Date(updateReceptionistDto.dateOfBirth) : undefined,
-        gender: updateReceptionistDto.gender,
-        address: updateReceptionistDto.address,
-        city: updateReceptionistDto.city,
-        hireDate: updateReceptionistDto.hireDate ? new Date(updateReceptionistDto.hireDate) : undefined,
-        shift: updateReceptionistDto.shift,
-        status: updateReceptionistDto.status,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    // Check if email is being changed and already exists
+    if (updateReceptionistDto.email && updateReceptionistDto.email !== receptionist.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: updateReceptionistDto.email },
+      });
+      if (existingUser && existingUser.id !== receptionist.userId) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Update user if email or password changed
+      if (updateReceptionistDto.email || updateReceptionistDto.password) {
+        const userData: any = {};
+        if (updateReceptionistDto.email) {
+          userData.email = updateReceptionistDto.email;
+        }
+        if (updateReceptionistDto.password) {
+          userData.password = await bcrypt.hash(updateReceptionistDto.password, 10);
+        }
+        await tx.user.update({
+          where: { id: receptionist.userId },
+          data: userData,
+        });
+      }
+
+      // Update receptionist profile
+      const updateData: any = {};
+      if (updateReceptionistDto.firstName) updateData.firstName = updateReceptionistDto.firstName;
+      if (updateReceptionistDto.lastName) updateData.lastName = updateReceptionistDto.lastName;
+      if (updateReceptionistDto.email) updateData.email = updateReceptionistDto.email;
+      if (updateReceptionistDto.phone) updateData.phone = updateReceptionistDto.phone;
+      if (updateReceptionistDto.dateOfBirth) updateData.dateOfBirth = new Date(updateReceptionistDto.dateOfBirth);
+      if (updateReceptionistDto.gender) updateData.gender = updateReceptionistDto.gender;
+      if (updateReceptionistDto.address) updateData.address = updateReceptionistDto.address;
+      if (updateReceptionistDto.city) updateData.city = updateReceptionistDto.city;
+      if (updateReceptionistDto.hireDate) updateData.hireDate = new Date(updateReceptionistDto.hireDate);
+      if (updateReceptionistDto.shift) updateData.shift = updateReceptionistDto.shift;
+      if (updateReceptionistDto.status) updateData.status = updateReceptionistDto.status;
+
+      return await tx.receptionist.update({
+        where: { id },
+        data: updateData,
+      });
     });
+
+    const { userId, ...receptionistData } = result;
+    return receptionistData;
   }
 
   async remove(id: string) {
@@ -154,8 +156,9 @@ export class ReceptionistsService {
       throw new NotFoundException(`Receptionist with ID ${id} not found`);
     }
 
-    await this.prisma.receptionist.delete({
-      where: { id },
+    // Delete user (cascade will delete receptionist profile)
+    await this.prisma.user.delete({
+      where: { id: receptionist.userId },
     });
 
     return { message: 'Receptionist deleted successfully' };

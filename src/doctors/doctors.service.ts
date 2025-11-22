@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DoctorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createDoctorDto: CreateDoctorDto) {
     // Check if email already exists
@@ -36,18 +36,18 @@ export class DoctorsService {
       throw new NotFoundException('Doctor role not found');
     }
 
-    // Create user and doctor in a transaction
-    const result = await this.prisma.$transaction(async (prisma) => {
+    // Create user and doctor in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
       // Create user
-      const user = await prisma.user.create({
+      const user = await tx.user.create({
         data: {
           email: createDoctorDto.email,
           password: hashedPassword,
         },
       });
 
-      // Assign doctor role to user
-      await prisma.userRole.create({
+      // Assign doctor role
+      await tx.userRole.create({
         data: {
           userId: user.id,
           roleId: doctorRole.id,
@@ -55,7 +55,7 @@ export class DoctorsService {
       });
 
       // Create doctor profile
-      const doctor = await prisma.doctor.create({
+      const doctor = await tx.doctor.create({
         data: {
           userId: user.id,
           firstName: createDoctorDto.firstName,
@@ -71,54 +71,32 @@ export class DoctorsService {
           hireDate: new Date(createDoctorDto.hireDate),
           status: createDoctorDto.status || 'active',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              createdAt: true,
-            },
-          },
-        },
       });
 
       return doctor;
     });
 
-    return result;
+    // Remove userId from response
+    const { userId, ...doctorData } = result;
+    return doctorData;
   }
 
   async findAll() {
-    return this.prisma.doctor.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    const doctors = await this.prisma.doctor.findMany({
+      orderBy: { createdAt: 'desc' },
     });
+    return doctors.map(({ userId, ...doctor }) => doctor);
   }
 
   async findOne(id: string) {
     const doctor = await this.prisma.doctor.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
     });
     if (!doctor) {
       throw new NotFoundException(`Doctor with ID ${id} not found`);
     }
-    return doctor;
+    const { userId, ...doctorData } = doctor;
+    return doctorData;
   }
 
   async update(id: string, updateDoctorDto: UpdateDoctorDto) {
@@ -129,8 +107,18 @@ export class DoctorsService {
       throw new NotFoundException(`Doctor with ID ${id} not found`);
     }
 
-    // Check if license number is being updated and if it already exists
-    if (updateDoctorDto.licenseNumber) {
+    // Check if email is being changed and already exists
+    if (updateDoctorDto.email && updateDoctorDto.email !== doctor.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: updateDoctorDto.email },
+      });
+      if (existingUser && existingUser.id !== doctor.userId) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Check if license number is being changed and already exists
+    if (updateDoctorDto.licenseNumber && updateDoctorDto.licenseNumber !== doctor.licenseNumber) {
       const existingDoctor = await this.prisma.doctor.findUnique({
         where: { licenseNumber: updateDoctorDto.licenseNumber },
       });
@@ -139,31 +127,45 @@ export class DoctorsService {
       }
     }
 
-    return this.prisma.doctor.update({
-      where: { id },
-      data: {
-        firstName: updateDoctorDto.firstName,
-        lastName: updateDoctorDto.lastName,
-        phone: updateDoctorDto.phone,
-        specialization: updateDoctorDto.specialization,
-        licenseNumber: updateDoctorDto.licenseNumber,
-        dateOfBirth: updateDoctorDto.dateOfBirth ? new Date(updateDoctorDto.dateOfBirth) : undefined,
-        gender: updateDoctorDto.gender,
-        address: updateDoctorDto.address,
-        city: updateDoctorDto.city,
-        hireDate: updateDoctorDto.hireDate ? new Date(updateDoctorDto.hireDate) : undefined,
-        status: updateDoctorDto.status,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true,
-          },
-        },
-      },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Update user if email or password changed
+      if (updateDoctorDto.email || updateDoctorDto.password) {
+        const userData: any = {};
+        if (updateDoctorDto.email) {
+          userData.email = updateDoctorDto.email;
+        }
+        if (updateDoctorDto.password) {
+          userData.password = await bcrypt.hash(updateDoctorDto.password, 10);
+        }
+        await tx.user.update({
+          where: { id: doctor.userId },
+          data: userData,
+        });
+      }
+
+      // Update doctor profile
+      const updateData: any = {};
+      if (updateDoctorDto.firstName) updateData.firstName = updateDoctorDto.firstName;
+      if (updateDoctorDto.lastName) updateData.lastName = updateDoctorDto.lastName;
+      if (updateDoctorDto.email) updateData.email = updateDoctorDto.email;
+      if (updateDoctorDto.phone) updateData.phone = updateDoctorDto.phone;
+      if (updateDoctorDto.specialization) updateData.specialization = updateDoctorDto.specialization;
+      if (updateDoctorDto.licenseNumber) updateData.licenseNumber = updateDoctorDto.licenseNumber;
+      if (updateDoctorDto.dateOfBirth) updateData.dateOfBirth = new Date(updateDoctorDto.dateOfBirth);
+      if (updateDoctorDto.gender) updateData.gender = updateDoctorDto.gender;
+      if (updateDoctorDto.address) updateData.address = updateDoctorDto.address;
+      if (updateDoctorDto.city) updateData.city = updateDoctorDto.city;
+      if (updateDoctorDto.hireDate) updateData.hireDate = new Date(updateDoctorDto.hireDate);
+      if (updateDoctorDto.status) updateData.status = updateDoctorDto.status;
+
+      return await tx.doctor.update({
+        where: { id },
+        data: updateData,
+      });
     });
+
+    const { userId, ...doctorData } = result;
+    return doctorData;
   }
 
   async remove(id: string) {
@@ -174,9 +176,9 @@ export class DoctorsService {
       throw new NotFoundException(`Doctor with ID ${id} not found`);
     }
 
-    // Delete doctor (will cascade delete user due to onDelete: Cascade)
-    await this.prisma.doctor.delete({
-      where: { id },
+    // Delete user (cascade will delete doctor profile)
+    await this.prisma.user.delete({
+      where: { id: doctor.userId },
     });
 
     return { message: 'Doctor deleted successfully' };

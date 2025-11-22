@@ -1,41 +1,53 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApplicatorsService } from './applicators.service';
 import { CreateApplicatorDto } from './dto/create-applicator.dto';
 import { UpdateApplicatorDto } from './dto/update-applicator.dto';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 
 @ApiTags('applicators')
 @ApiBearerAuth()
 @Controller('applicators')
+@UseGuards(JwtAuthGuard)
 export class ApplicatorsController {
   constructor(private readonly applicatorsService: ApplicatorsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new applicator' })
+  @ApiResponse({ status: 201, description: 'Applicator created successfully' })
+  @ApiResponse({ status: 409, description: 'Email or certification number already exists' })
   create(@Body() createApplicatorDto: CreateApplicatorDto) {
     return this.applicatorsService.create(createApplicatorDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all applicators' })
+  @ApiResponse({ status: 200, description: 'List of all applicators' })
   findAll() {
     return this.applicatorsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get an applicator by ID' })
+  @ApiOperation({ summary: 'Get applicator by ID' })
+  @ApiResponse({ status: 200, description: 'Applicator details' })
+  @ApiResponse({ status: 404, description: 'Applicator not found' })
   findOne(@Param('id') id: string) {
     return this.applicatorsService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update an applicator' })
+  @ApiOperation({ summary: 'Update applicator' })
+  @ApiResponse({ status: 200, description: 'Applicator updated successfully' })
+  @ApiResponse({ status: 404, description: 'Applicator not found' })
+  @ApiResponse({ status: 409, description: 'Email or certification number already exists' })
   update(@Param('id') id: string, @Body() updateApplicatorDto: UpdateApplicatorDto) {
     return this.applicatorsService.update(id, updateApplicatorDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete an applicator' })
+  @ApiOperation({ summary: 'Delete applicator' })
+  @ApiResponse({ status: 200, description: 'Applicator deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Applicator not found' })
   remove(@Param('id') id: string) {
     return this.applicatorsService.remove(id);
   }

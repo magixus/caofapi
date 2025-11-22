@@ -13,6 +13,9 @@
       "name": "technician"
     },
     {
+      "name": "applicator"
+    },
+    {
       "name": "user"
     }
   ],
@@ -158,6 +161,24 @@
         "read:diagnosis",
         "create:fabrication-order", "read:fabrication-order", "update:fabrication-order",
         "create:execution-order", "read:execution-order", "update:execution-order",
+        "create:finalized-device", "read:finalized-device", "update:finalized-device",
+        "read:notification", "update:notification",
+        "read:dashboard", "read:search",
+        "create:upload", "read:upload",
+        "read:workflow"
+      ]
+    },
+    {
+      "roleName": "applicator",
+      "permissionActions": [
+        "read:patient",
+        "read:employee",
+        "read:device",
+        "read:component",
+        "read:quotation",
+        "read:diagnosis",
+        "read:fabrication-order",
+        "read:execution-order", "update:execution-order",
         "create:finalized-device", "read:finalized-device", "update:finalized-device",
         "read:notification", "update:notification",
         "read:dashboard", "read:search",
