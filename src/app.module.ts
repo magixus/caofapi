@@ -26,6 +26,9 @@ import { UploadsModule } from './uploads/uploads.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 import { CommonModule } from './common/common.module';
+import { DoctorsModule } from './doctors/doctors.module';
+import { ReceptionistsModule } from './receptionists/receptionists.module';
+import { ApplicatorsModule } from './applicators/applicators.module';
 
 @Module({
   imports: [
@@ -54,6 +57,9 @@ import { CommonModule } from './common/common.module';
     AnalyticsModule,
     SearchModule,
     UploadsModule,
+    DoctorsModule,
+    ReceptionistsModule,
+    ApplicatorsModule,
   ],
   controllers: [AppController],
   providers: [

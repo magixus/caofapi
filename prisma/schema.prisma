@@ -8,12 +8,15 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  password     String
-  roles        UserRole[]
-  createdAt    DateTime   @default(now())
-  isSuperAdmin Boolean    @default(false)
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String
+  roles         UserRole[]
+  createdAt     DateTime      @default(now())
+  isSuperAdmin  Boolean       @default(false)
+  doctor        Doctor?
+  receptionist  Receptionist?
+  applicator    Applicator?
 }
 
 model Role {
@@ -67,6 +70,91 @@ model Employee {
   executionOrdersAssignedTo   ExecutionOrder[]   @relation("ExecutionOrderAssignedTo")
   executionOrdersAssignedBy   ExecutionOrder[]   @relation("ExecutionOrderAssignedBy")
   Quotation                   Quotation[]
+}
+
+enum EmployeeStatus {
+  active
+  inactive
+  on_leave
+}
+
+enum Shift {
+  morning
+  afternoon
+  evening
+  night
+}
+
+model Doctor {
+  id              String         @id @default(uuid())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String         @unique
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  specialization  String
+  licenseNumber   String         @unique
+  dateOfBirth     DateTime
+  gender          String         // "Male" or "Female"
+  address         String
+  city            String
+  hireDate        DateTime
+  status          EmployeeStatus @default(active)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+}
+
+model Receptionist {
+  id          String         @id @default(uuid())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String         @unique
+  firstName   String
+  lastName    String
+  email       String
+  phone       String
+  dateOfBirth DateTime
+  gender      String         // "Male" or "Female"
+  address     String
+  city        String
+  hireDate    DateTime
+  shift       Shift
+  status      EmployeeStatus @default(active)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+}
+
+model Applicator {
+  id                  String         @id @default(uuid())
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String         @unique
+  firstName           String
+  lastName            String
+  email               String
+  phone               String
+  specialization      String
+  certificationNumber String         @unique
+  dateOfBirth         DateTime
+  gender              String         // "Male" or "Female"
+  address             String
+  city                String
+  hireDate            DateTime
+  experienceYears     Int
+  status              EmployeeStatus @default(active)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  
+  @@index([userId])
+  @@index([email])
+  @@index([status])
 }
 
 model Patient {
