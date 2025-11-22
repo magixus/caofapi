@@ -4,6 +4,8 @@ import { ReceptionistsService } from './receptionists.service';
 import { CreateReceptionistDto } from './dto/create-receptionist.dto';
 import { UpdateReceptionistDto } from './dto/update-receptionist.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { ResourceAccessGuard } from '@/guards/resource-access.guard';
+import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
 
 @ApiTags('receptionists')
 @ApiBearerAuth()
@@ -13,8 +15,11 @@ export class ReceptionistsController {
   constructor(private readonly receptionistsService: ReceptionistsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new receptionist' })
+  @UseGuards(ResourceAccessGuard)
+  @RequireResourceRoles('employee', 'create', ['admin'])
+  @ApiOperation({ summary: 'Create a new receptionist (Admin only)' })
   @ApiResponse({ status: 201, description: 'Receptionist created successfully' })
+  @ApiResponse({ status: 403, description: 'Access denied - Only admin can create receptionists' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   create(@Body() createReceptionistDto: CreateReceptionistDto) {
     return this.receptionistsService.create(createReceptionistDto);

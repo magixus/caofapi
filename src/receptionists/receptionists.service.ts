@@ -17,8 +17,11 @@ export class ReceptionistsService {
       throw new ConflictException('Email already exists');
     }
 
+    // Generate password if not provided (email prefix + random 4 digits)
+    const password = createReceptionistDto.password || `${createReceptionistDto.email.split('@')[0]}${Math.floor(1000 + Math.random() * 9000)}`;
+    
     // Hash password
-    const hashedPassword = await bcrypt.hash(createReceptionistDto.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Get receptionist role
     const receptionistRole = await this.prisma.role.findUnique({

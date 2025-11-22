@@ -4,6 +4,8 @@ import { ApplicatorsService } from './applicators.service';
 import { CreateApplicatorDto } from './dto/create-applicator.dto';
 import { UpdateApplicatorDto } from './dto/update-applicator.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { ResourceAccessGuard } from '@/guards/resource-access.guard';
+import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
 
 @ApiTags('applicators')
 @ApiBearerAuth()
@@ -13,8 +15,11 @@ export class ApplicatorsController {
   constructor(private readonly applicatorsService: ApplicatorsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new applicator' })
+  @UseGuards(ResourceAccessGuard)
+  @RequireResourceRoles('employee', 'create', ['admin'])
+  @ApiOperation({ summary: 'Create a new applicator (Admin only)' })
   @ApiResponse({ status: 201, description: 'Applicator created successfully' })
+  @ApiResponse({ status: 403, description: 'Access denied - Only admin can create applicators' })
   @ApiResponse({ status: 409, description: 'Email or certification number already exists' })
   create(@Body() createApplicatorDto: CreateApplicatorDto) {
     return this.applicatorsService.create(createApplicatorDto);

@@ -25,8 +25,11 @@ export class DoctorsService {
       throw new ConflictException('License number already exists');
     }
 
+    // Generate password if not provided (email prefix + random 4 digits)
+    const password = createDoctorDto.password || `${createDoctorDto.email.split('@')[0]}${Math.floor(1000 + Math.random() * 9000)}`;
+    
     // Hash password
-    const hashedPassword = await bcrypt.hash(createDoctorDto.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Get doctor role
     const doctorRole = await this.prisma.role.findUnique({

@@ -4,6 +4,8 @@ import { DoctorsService } from './doctors.service';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { UpdateDoctorDto } from './dto/update-doctor.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { ResourceAccessGuard } from '@/guards/resource-access.guard';
+import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
 
 @ApiTags('doctors')
 @ApiBearerAuth()
@@ -13,8 +15,11 @@ export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new doctor' })
+  @UseGuards(ResourceAccessGuard)
+  @RequireResourceRoles('employee', 'create', ['admin'])
+  @ApiOperation({ summary: 'Create a new doctor (Admin only)' })
   @ApiResponse({ status: 201, description: 'Doctor created successfully' })
+  @ApiResponse({ status: 403, description: 'Access denied - Only admin can create doctors' })
   @ApiResponse({ status: 409, description: 'Email or license number already exists' })
   create(@Body() createDoctorDto: CreateDoctorDto) {
     return this.doctorsService.create(createDoctorDto);

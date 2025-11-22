@@ -47,7 +47,8 @@ export class CreateReceptionistDto {
   @IsEnum(['active', 'inactive', 'on_leave'])
   status?: 'active' | 'inactive' | 'on_leave';
 
-  @ApiProperty({ description: 'Password for the user account' })
+  @ApiPropertyOptional({ description: 'Password for the user account (optional - will be auto-generated if not provided)' })
+  @IsOptional()
   @IsString()
-  password: string;
+  password?: string;
 }

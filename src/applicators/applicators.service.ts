@@ -25,8 +25,11 @@ export class ApplicatorsService {
       throw new ConflictException('Certification number already exists');
     }
 
+    // Generate password if not provided (email prefix + random 4 digits)
+    const password = createApplicatorDto.password || `${createApplicatorDto.email.split('@')[0]}${Math.floor(1000 + Math.random() * 9000)}`;
+    
     // Hash password
-    const hashedPassword = await bcrypt.hash(createApplicatorDto.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Get applicator role
     const applicatorRole = await this.prisma.role.findUnique({
