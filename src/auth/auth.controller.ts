@@ -28,29 +28,53 @@ export class AuthController {
   @Get('who')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current authenticated user details with profile' })
+  @ApiOperation({ summary: 'Get current authenticated user details (with employee profile if applicable)' })
   @ApiResponse({ 
     status: 200, 
-    description: 'User details with profile information',
+    description: 'User details with employee profile if user is an employee',
     schema: {
-      example: {
-        id: 'user-uuid',
-        email: 'doctor@example.com',
-        roles: ['doctor'],
-        isSuperAdmin: false,
-        profile: {
-          type: 'doctor',
-          id: 'profile-uuid',
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'doctor@example.com',
-          phone: '+1234567890',
-          specialization: 'Orthopedics',
-          licenseNumber: 'DOC-12345',
-          status: 'active',
-          // ... other profile fields
+      oneOf: [
+        {
+          title: 'Employee User',
+          example: {
+            id: 'user-uuid',
+            email: 'doctor@example.com',
+            roles: ['doctor'],
+            isSuperAdmin: false,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            isEmployee: true,
+            employeeType: 'doctor',
+            employee: {
+              type: 'doctor',
+              userId: 'user-uuid',
+              firstName: 'John',
+              lastName: 'Doe',
+              email: 'doctor@example.com',
+              phone: '+1234567890',
+              specialization: 'Orthopedics',
+              licenseNumber: 'DOC-12345',
+              dateOfBirth: '1980-01-15T00:00:00.000Z',
+              gender: 'Male',
+              address: '123 Main St',
+              city: 'Boston',
+              hireDate: '2020-01-01T00:00:00.000Z',
+              status: 'active',
+              createdAt: '2025-01-01T00:00:00.000Z'
+            }
+          }
+        },
+        {
+          title: 'Regular User',
+          example: {
+            id: 'user-uuid',
+            email: 'user@example.com',
+            roles: ['user'],
+            isSuperAdmin: false,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            isEmployee: false
+          }
         }
-      }
+      ]
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -63,6 +63,7 @@ export class AuthService {
       where: { id: userId },
       include: { 
         roles: { include: { role: true } },
+        employee: true,
         doctor: true,
         receptionist: true,
         applicator: true,
@@ -75,34 +76,51 @@ export class AuthService {
 
     const roles = user.roles?.map((r: any) => r.role.name) || [];
 
-    // Determine profile type and data
-    let profile: any = null;
-    let profileType: string | null = null;
+    // Check if user is an employee and get profile details
+    if (user.employee) {
+      let employeeProfile: any = null;
+      const employeeType = user.employee.type;
 
-    if (user.doctor) {
-      profileType = 'doctor';
-      const { userId: _, updatedAt, ...doctorData } = user.doctor;
-      profile = doctorData;
-    } else if (user.receptionist) {
-      profileType = 'receptionist';
-      const { userId: _, updatedAt, ...receptionistData } = user.receptionist;
-      profile = receptionistData;
-    } else if (user.applicator) {
-      profileType = 'applicator';
-      const { userId: _, updatedAt, ...applicatorData } = user.applicator;
-      profile = applicatorData;
+      if (employeeType === 'doctor' && user.doctor) {
+        const { userId: _, updatedAt, ...doctorData } = user.doctor;
+        employeeProfile = {
+          type: 'doctor',
+          ...doctorData,
+        };
+      } else if (employeeType === 'receptionist' && user.receptionist) {
+        const { userId: _, updatedAt, ...receptionistData } = user.receptionist;
+        employeeProfile = {
+          type: 'receptionist',
+          ...receptionistData,
+        };
+      } else if (employeeType === 'applicator' && user.applicator) {
+        const { userId: _, updatedAt, ...applicatorData } = user.applicator;
+        employeeProfile = {
+          type: 'applicator',
+          ...applicatorData,
+        };
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        roles,
+        isSuperAdmin: user.isSuperAdmin,
+        createdAt: user.createdAt,
+        isEmployee: true,
+        employeeType: user.employee.type,
+        employee: employeeProfile,
+      };
     }
 
+    // Return basic user details if not an employee
     return {
       id: user.id,
       email: user.email,
       roles,
       isSuperAdmin: user.isSuperAdmin,
       createdAt: user.createdAt,
-      profile: profile ? {
-        type: profileType,
-        ...profile,
-      } : null,
+      isEmployee: false,
     };
   }
 }
