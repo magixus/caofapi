@@ -98,7 +98,7 @@ export class ReceptionistsService {
       where: { id },
     });
     if (!receptionist) {
-      throw new NotFoundException(`Receptionist with ID ${id} not found`);
+      throw new NotFoundException(`Receptionist with ID ${userId} not found`);
     }
 
     // Check if email is being changed and already exists

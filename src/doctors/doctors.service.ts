@@ -57,6 +57,14 @@ export class DoctorsService {
         },
       });
 
+      // Create employee record
+      await tx.employee.create({
+        data: {
+          userId: user.id,
+          type: 'doctor',
+        },
+      });
+
       // Create doctor profile
       const doctor = await tx.doctor.create({
         data: {
@@ -88,26 +96,25 @@ export class DoctorsService {
     const doctors = await this.prisma.doctor.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return doctors.map(({ userId, ...doctor }) => doctor);
+    return doctors;
   }
 
-  async findOne(id: string) {
+  async findOne(userId: string) {
     const doctor = await this.prisma.doctor.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${id} not found`);
+      throw new NotFoundException(`Doctor with ID ${userId} not found`);
     }
-    const { userId, ...doctorData } = doctor;
-    return doctorData;
+    return doctor;
   }
 
-  async update(id: string, updateDoctorDto: UpdateDoctorDto) {
+  async update(userId: string, updateDoctorDto: UpdateDoctorDto) {
     const doctor = await this.prisma.doctor.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${id} not found`);
+      throw new NotFoundException(`Doctor with ID ${userId} not found`);
     }
 
     // Check if email is being changed and already exists
@@ -125,7 +132,7 @@ export class DoctorsService {
       const existingDoctor = await this.prisma.doctor.findUnique({
         where: { licenseNumber: updateDoctorDto.licenseNumber },
       });
-      if (existingDoctor && existingDoctor.id !== id) {
+      if (existingDoctor && existingDoctor.userId !== userId) {
         throw new ConflictException('License number already exists');
       }
     }
@@ -162,26 +169,25 @@ export class DoctorsService {
       if (updateDoctorDto.status) updateData.status = updateDoctorDto.status;
 
       return await tx.doctor.update({
-        where: { id },
+        where: { userId },
         data: updateData,
       });
     });
 
-    const { userId, ...doctorData } = result;
-    return doctorData;
+    return result;
   }
 
-  async remove(id: string) {
+  async remove(userId: string) {
     const doctor = await this.prisma.doctor.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!doctor) {
-      throw new NotFoundException(`Doctor with ID ${id} not found`);
+      throw new NotFoundException(`Doctor with ID ${userId} not found`);
     }
 
-    // Delete user (cascade will delete doctor profile)
+    // Delete user (cascade will delete doctor profile and employee record)
     await this.prisma.user.delete({
-      where: { id: doctor.userId },
+      where: { id: userId },
     });
 
     return { message: 'Doctor deleted successfully' };

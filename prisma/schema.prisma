@@ -14,6 +14,7 @@ model User {
   roles         UserRole[]
   createdAt     DateTime      @default(now())
   isSuperAdmin  Boolean       @default(false)
+  employee      Employee?
   doctor        Doctor?
   receptionist  Receptionist?
   applicator    Applicator?
@@ -52,17 +53,13 @@ model UserRole {
 }
 
 model Employee {
-  id           String   @id @default(uuid())
-  firstName    String
-  lastName     String
-  nationalId   String   @db.Char(18)
-  dateOfBirth  DateTime
-  placeOfBirth String
-  photos       String[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // "doctor", "receptionist", "applicator", etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Reverse relations
+  // Old fields for backward compatibility with existing relations
   diagnosesAssignedTo         Diagnosis[]        @relation("DiagnosisAssignedTo")
   diagnosesAssignedBy         Diagnosis[]        @relation("DiagnosisAssignedBy")
   fabricationOrdersAssignedTo FabricationOrder[] @relation("FabricationOrderAssignedTo")
@@ -70,6 +67,8 @@ model Employee {
   executionOrdersAssignedTo   ExecutionOrder[]   @relation("ExecutionOrderAssignedTo")
   executionOrdersAssignedBy   ExecutionOrder[]   @relation("ExecutionOrderAssignedBy")
   Quotation                   Quotation[]
+  
+  @@index([type])
 }
 
 enum EmployeeStatus {
@@ -86,9 +85,8 @@ enum Shift {
 }
 
 model Doctor {
-  id              String         @id @default(uuid())
+  userId          String         @id
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String         @unique
   firstName       String
   lastName        String
   email           String
@@ -104,15 +102,13 @@ model Doctor {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   
-  @@index([userId])
   @@index([email])
   @@index([status])
 }
 
 model Receptionist {
-  id          String         @id @default(uuid())
+  userId      String         @id
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String         @unique
   firstName   String
   lastName    String
   email       String
@@ -127,15 +123,13 @@ model Receptionist {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   
-  @@index([userId])
   @@index([email])
   @@index([status])
 }
 
 model Applicator {
-  id                  String         @id @default(uuid())
+  userId              String         @id
   user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId              String         @unique
   firstName           String
   lastName            String
   email               String
@@ -152,7 +146,6 @@ model Applicator {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   
-  @@index([userId])
   @@index([email])
   @@index([status])
 }
@@ -244,7 +237,7 @@ model Quotation {
   code             String             @unique // CA-YYYYMM0000000001 format
   patient          Patient            @relation(fields: [patientId], references: [id])
   patientId        String
-  createdBy        Employee           @relation(fields: [createdById], references: [id])
+  createdBy        Employee           @relation(fields: [createdById], references: [userId])
   createdById      String
   status           QuotationStatus    @default(created)
   documents        PatientDocument[]  // Related documents
@@ -267,10 +260,10 @@ model Diagnosis {
   medicalDevice      String
   photos             String[]
   patientTestimonial String?
-  assignedTo         Employee? @relation("DiagnosisAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo         Employee? @relation("DiagnosisAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId       String?
   assignedAt         DateTime?
-  assignedBy         Employee? @relation("DiagnosisAssignedBy", fields: [assignedById], references: [id])
+  assignedBy         Employee? @relation("DiagnosisAssignedBy", fields: [assignedById], references: [userId])
   assignedById       String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -286,10 +279,10 @@ model FabricationOrder {
   id           String                 @id @default(uuid())
   quotation    Quotation              @relation(fields: [quotationId], references: [id])
   quotationId  String                 @unique
-  assignedTo   Employee?              @relation("FabricationOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo   Employee?              @relation("FabricationOrderAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId String?
   assignedAt   DateTime?
-  assignedBy   Employee?              @relation("FabricationOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedBy   Employee?              @relation("FabricationOrderAssignedBy", fields: [assignedById], references: [userId])
   assignedById String?
   status       FabricationOrderStatus @default(created)
   createdAt    DateTime               @default(now())
@@ -331,9 +324,9 @@ model ExecutionOrder {
   deviceId     String
   components   ExecutionOrderComponents[]
   eta          DateTime?
-  assignedTo   Employee?                  @relation("ExecutionOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo   Employee?                  @relation("ExecutionOrderAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId String?
-  assignedBy   Employee?                  @relation("ExecutionOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedBy   Employee?                  @relation("ExecutionOrderAssignedBy", fields: [assignedById], references: [userId])
   assignedById String?
   assignedAt   DateTime
   status       ExecutionOrderStatus       @default(created)
