@@ -1,61 +1,122 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 @Injectable()
 export class EmployeesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createEmployeeDto: CreateEmployeeDto) {
-    return this.prisma.employee.create({
-      data: {
-        firstName: createEmployeeDto.firstName,
-        lastName: createEmployeeDto.lastName,
-        nationalId: createEmployeeDto.nationalId,
-        dateOfBirth: createEmployeeDto.dateOfBirth,
-        placeOfBirth: createEmployeeDto.placeOfBirth,
-        photos: createEmployeeDto.photos ?? [],
+  async findAll() {
+    // Get all employees with their type
+    const employees = await this.prisma.employee.findMany({
+      include: {
+        user: {
+          select: {
+            email: true,
+            doctor: true,
+            receptionist: true,
+            applicator: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Map to unified employee format
+    return employees.map((emp) => {
+      const type = emp.type;
+      let profile: any = null;
+
+      if (type === 'doctor' && emp.user.doctor) {
+        profile = emp.user.doctor;
+      } else if (type === 'receptionist' && emp.user.receptionist) {
+        profile = emp.user.receptionist;
+      } else if (type === 'applicator' && emp.user.applicator) {
+        profile = emp.user.applicator;
+      }
+
+      return {
+        userId: emp.userId,
+        type: emp.type,
+        email: emp.user.email,
+        createdAt: emp.createdAt,
+        ...profile,
+      };
+    });
+  }
+
+  async findOne(userId: string) {
+    const employee = await this.prisma.employee.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            email: true,
+            doctor: true,
+            receptionist: true,
+            applicator: true,
+          },
+        },
       },
     });
-  }
-
-  async findAll() {
-    return this.prisma.employee.findMany();
-  }
-
-  async findOne(id: string) {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id },
-    });
+    
     if (!employee) {
-      throw new NotFoundException(`Employee with ID ${id} not found`);
+      throw new NotFoundException(`Employee with ID ${userId} not found`);
     }
-    return employee;
+
+    const type = employee.type;
+    let profile: any = null;
+
+    if (type === 'doctor' && employee.user.doctor) {
+      profile = employee.user.doctor;
+    } else if (type === 'receptionist' && employee.user.receptionist) {
+      profile = employee.user.receptionist;
+    } else if (type === 'applicator' && employee.user.applicator) {
+      profile = employee.user.applicator;
+    }
+
+    return {
+      userId: employee.userId,
+      type: employee.type,
+      email: employee.user.email,
+      createdAt: employee.createdAt,
+      ...profile,
+    };
   }
 
-  async update(id: string, updateEmployeeDto: UpdateEmployeeDto) {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id },
+  async findByType(type: string) {
+    const employees = await this.prisma.employee.findMany({
+      where: { type },
+      include: {
+        user: {
+          select: {
+            email: true,
+            doctor: true,
+            receptionist: true,
+            applicator: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
-    if (!employee) {
-      throw new NotFoundException(`Employee with ID ${id} not found`);
-    }
-    return this.prisma.employee.update({
-      where: { id },
-      data: updateEmployeeDto,
-    });
-  }
 
-  async remove(id: string) {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id },
-    });
-    if (!employee) {
-      throw new NotFoundException(`Employee with ID ${id} not found`);
-    }
-    return this.prisma.employee.delete({
-      where: { id },
+    return employees.map((emp) => {
+      let profile: any = null;
+
+      if (type === 'doctor' && emp.user.doctor) {
+        profile = emp.user.doctor;
+      } else if (type === 'receptionist' && emp.user.receptionist) {
+        profile = emp.user.receptionist;
+      } else if (type === 'applicator' && emp.user.applicator) {
+        profile = emp.user.applicator;
+      }
+
+      return {
+        userId: emp.userId,
+        type: emp.type,
+        email: emp.user.email,
+        createdAt: emp.createdAt,
+        ...profile,
+      };
     });
   }
 }

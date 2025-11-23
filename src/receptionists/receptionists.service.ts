@@ -79,23 +79,22 @@ export class ReceptionistsService {
     const receptionists = await this.prisma.receptionist.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return receptionists.map(({ userId, ...receptionist }) => receptionist);
+    return receptionists;
   }
 
-  async findOne(id: string) {
+  async findOne(userId: string) {
     const receptionist = await this.prisma.receptionist.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!receptionist) {
-      throw new NotFoundException(`Receptionist with ID ${id} not found`);
+      throw new NotFoundException(`Receptionist with ID ${userId} not found`);
     }
-    const { userId, ...receptionistData } = receptionist;
-    return receptionistData;
+    return receptionist;
   }
 
-  async update(id: string, updateReceptionistDto: UpdateReceptionistDto) {
+  async update(userId: string, updateReceptionistDto: UpdateReceptionistDto) {
     const receptionist = await this.prisma.receptionist.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!receptionist) {
       throw new NotFoundException(`Receptionist with ID ${userId} not found`);
@@ -142,26 +141,25 @@ export class ReceptionistsService {
       if (updateReceptionistDto.status) updateData.status = updateReceptionistDto.status;
 
       return await tx.receptionist.update({
-        where: { id },
+        where: { userId },
         data: updateData,
       });
     });
 
-    const { userId, ...receptionistData } = result;
-    return receptionistData;
+    return result;
   }
 
-  async remove(id: string) {
+  async remove(userId: string) {
     const receptionist = await this.prisma.receptionist.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!receptionist) {
-      throw new NotFoundException(`Receptionist with ID ${id} not found`);
+      throw new NotFoundException(`Receptionist with ID ${userId} not found`);
     }
 
-    // Delete user (cascade will delete receptionist profile)
+    // Delete user (cascade will delete receptionist profile and employee record)
     await this.prisma.user.delete({
-      where: { id: receptionist.userId },
+      where: { id: userId },
     });
 
     return { message: 'Receptionist deleted successfully' };

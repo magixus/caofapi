@@ -216,8 +216,8 @@ export class FabricationOrdersService {
 
       // Validate employees exist
       const [assignedTo, assignedBy] = await Promise.all([
-        this.prisma.employee.findUnique({ where: { id: assignDto.assignedToId } }),
-        this.prisma.employee.findUnique({ where: { id: assignDto.assignedById } }),
+        this.prisma.employee.findUnique({ where: { userId: assignDto.assignedToId } }),
+        this.prisma.employee.findUnique({ where: { userId: assignDto.assignedById } }),
       ]);
 
       if (!assignedTo) {

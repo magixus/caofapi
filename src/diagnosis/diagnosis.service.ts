@@ -121,8 +121,8 @@ export class DiagnosisService {
 
       // Validate employees exist
       const [assignedTo, assignedBy] = await Promise.all([
-        this.prisma.employee.findUnique({ where: { id: assignDiagnosisDto.assignedToId } }),
-        this.prisma.employee.findUnique({ where: { id: assignDiagnosisDto.assignedById } }),
+        this.prisma.employee.findUnique({ where: { userId: assignDiagnosisDto.assignedToId } }),
+        this.prisma.employee.findUnique({ where: { userId: assignDiagnosisDto.assignedById } }),
       ]);
 
       if (!assignedTo) {

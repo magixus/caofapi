@@ -73,35 +73,15 @@ export class QuotationsService {
         );
       }
 
-      // Try to find or create employee for this user
-      let employee = await this.prisma.employee.findFirst({
-        where: {
-          // If you have a userId field in Employee, use it
-          // Otherwise, we'll need to create a default employee
-        },
+      // Validate that user is an employee (has employee record)
+      const employee = await this.prisma.employee.findUnique({
+        where: { userId },
       });
 
-      // If no employee found, create a default one for this user
       if (!employee) {
-        this.logger.log(`No employee found for user ${userId}, creating default employee`);
-        const user = await this.prisma.user.findUnique({
-          where: { id: userId },
-        });
-        
-        if (!user) {
-          throw new NotFoundException(`User with ID ${userId} not found`);
-        }
-
-        employee = await this.prisma.employee.create({
-          data: {
-            firstName: user.email.split('@')[0],
-            lastName: 'User',
-            nationalId: userId.substring(0, 18).padEnd(18, '0'),
-            dateOfBirth: new Date('1990-01-01'),
-            placeOfBirth: 'System Generated',
-          },
-        });
-        this.logger.log(`Created default employee with ID: ${employee.id}`);
+        throw new NotFoundException(
+          `User with ID ${userId} is not registered as an employee. Only employees can create quotations.`,
+        );
       }
 
       // Generate sequential code
@@ -114,7 +94,7 @@ export class QuotationsService {
             connect: { id: createQuotationDto.patientId }
           },
           createdBy: {
-            connect: { id: employee.id }
+            connect: { userId }
           },
           status: createQuotationDto.status || 'created',
         },

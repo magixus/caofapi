@@ -57,6 +57,14 @@ export class ApplicatorsService {
         },
       });
 
+      // Create employee record
+      await tx.employee.create({
+        data: {
+          userId: user.id,
+          type: 'applicator',
+        },
+      });
+
       // Create applicator profile
       const applicator = await tx.applicator.create({
         data: {
@@ -80,35 +88,32 @@ export class ApplicatorsService {
       return applicator;
     });
 
-    // Remove userId from response
-    const { userId, ...applicatorData } = result;
-    return applicatorData;
+    return result;
   }
 
   async findAll() {
     const applicators = await this.prisma.applicator.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return applicators.map(({ userId, ...applicator }) => applicator);
+    return applicators;
   }
 
-  async findOne(id: string) {
+  async findOne(userId: string) {
     const applicator = await this.prisma.applicator.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!applicator) {
-      throw new NotFoundException(`Applicator with ID ${id} not found`);
+      throw new NotFoundException(`Applicator with ID ${userId} not found`);
     }
-    const { userId, ...applicatorData } = applicator;
-    return applicatorData;
+    return applicator;
   }
 
-  async update(id: string, updateApplicatorDto: UpdateApplicatorDto) {
+  async update(userId: string, updateApplicatorDto: UpdateApplicatorDto) {
     const applicator = await this.prisma.applicator.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!applicator) {
-      throw new NotFoundException(`Applicator with ID ${id} not found`);
+      throw new NotFoundException(`Applicator with ID ${userId} not found`);
     }
 
     // Check if email is being changed and already exists
@@ -126,7 +131,7 @@ export class ApplicatorsService {
       const existingApplicator = await this.prisma.applicator.findUnique({
         where: { certificationNumber: updateApplicatorDto.certificationNumber },
       });
-      if (existingApplicator && existingApplicator.id !== id) {
+      if (existingApplicator && existingApplicator.userId !== userId) {
         throw new ConflictException('Certification number already exists');
       }
     }
@@ -164,26 +169,25 @@ export class ApplicatorsService {
       if (updateApplicatorDto.status) updateData.status = updateApplicatorDto.status;
 
       return await tx.applicator.update({
-        where: { id },
+        where: { userId },
         data: updateData,
       });
     });
 
-    const { userId, ...applicatorData } = result;
-    return applicatorData;
+    return result;
   }
 
-  async remove(id: string) {
+  async remove(userId: string) {
     const applicator = await this.prisma.applicator.findUnique({
-      where: { id },
+      where: { userId },
     });
     if (!applicator) {
-      throw new NotFoundException(`Applicator with ID ${id} not found`);
+      throw new NotFoundException(`Applicator with ID ${userId} not found`);
     }
 
-    // Delete user (cascade will delete applicator profile)
+    // Delete user (cascade will delete applicator profile and employee record)
     await this.prisma.user.delete({
-      where: { id: applicator.userId },
+      where: { id: userId },
     });
 
     return { message: 'Applicator deleted successfully' };

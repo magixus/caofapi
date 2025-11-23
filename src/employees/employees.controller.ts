@@ -1,53 +1,37 @@
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { Roles } from '@/decorators/roles.decorator';
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   Param,
-  ParseIntPipe,
-  Patch,
-  Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 
+@ApiTags('employees')
 @Controller('employees')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Roles('admin')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
-  @Post()
-  create(@Body() createEmployeeDto: CreateEmployeeDto) {
-    return this.employeesService.create(createEmployeeDto);
-  }
-
   @Get()
-  findAll() {
+  @ApiOperation({ summary: 'Get all employees (doctors, receptionists, applicators)' })
+  @ApiQuery({ name: 'type', required: false, enum: ['doctor', 'receptionist', 'applicator'], description: 'Filter by employee type' })
+  @ApiResponse({ status: 200, description: 'List of all employees with their profiles' })
+  findAll(@Query('type') type?: string) {
+    if (type) {
+      return this.employeesService.findByType(type);
+    }
     return this.employeesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: string) {
-    return this.employeesService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: string,
-    @Body() updateEmployeeDto: UpdateEmployeeDto,
-  ) {
-    return this.employeesService.update(id, updateEmployeeDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: string) {
-    return this.employeesService.remove(id);
+  @Get(':userId')
+  @ApiOperation({ summary: 'Get employee by userId' })
+  @ApiResponse({ status: 200, description: 'Employee details with profile' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  findOne(@Param('userId') userId: string) {
+    return this.employeesService.findOne(userId);
   }
 }
