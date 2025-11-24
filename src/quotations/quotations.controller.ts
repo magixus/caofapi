@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
+import { ResourceAccessGuard } from '@/guards/resource-access.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { QuotationsService } from './quotations.service';
 import { CreateQuotationDto } from './dto/create-quotations.dto';
 import { UpdateQuotationDto } from './dto/update-quotations.dto';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { ResourceAccessGuard } from '@/guards/resource-access.guard';
-import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
+import { QuotationsService } from './quotations.service';
 
 @ApiTags('quotations')
 @ApiBearerAuth()

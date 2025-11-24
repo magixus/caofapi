@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { QuotationsService } from './quotations.service';
-import { QuotationsController } from './quotations.controller';
 import { PrismaModule } from '@/prisma/prisma.module';
+import { Module } from '@nestjs/common';
+import { QuotationsController } from './quotations.controller';
+import { QuotationsService } from './quotations.service';
 
 @Module({
   imports: [PrismaModule],
