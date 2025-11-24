@@ -9,7 +9,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { ConfigModule } from '@nestjs/config';
 import { EmployeesModule } from './employees/employees.module';
 import { SeederModule } from './seeder/seeder.module';
-import { QuotationModule } from './quotation/quotation.module';
+import { QuotationsModule } from './quotations/quotations.module';
 import { PatientsModule } from './patients/patients.module';
 import { DiagnosisModule } from './diagnosis/diagnosis.module';
 import { FabricationOrdersModule } from './fabrication-orders/fabrication-orders.module';
@@ -43,7 +43,7 @@ import { ApplicatorsModule } from './applicators/applicators.module';
     PermissionsModule,
     EmployeesModule,
     SeederModule,
-    QuotationModule,
+    QuotationsModule,
     PatientsModule,
     DiagnosisModule,
     FabricationOrdersModule,

@@ -382,7 +382,7 @@ model AuditLog {
   userEmail   String?
   userRole    String?
   action      AuditAction
-  resource    String      // e.g., "patient", "quotation", "device"
+  resource    String      // e.g., "patient", "quotations", "device"
   resourceId  String?     // ID of the affected resource
   method      String?     // HTTP method (GET, POST, PUT, DELETE)
   endpoint    String?     // API endpoint

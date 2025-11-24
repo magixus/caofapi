@@ -3,8 +3,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Quotation } from '@prisma/client';
-import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
+import { CreateQuotationDto } from './dto/create-quotations.dto';
+import { UpdateQuotationDto } from './dto/update-quotations.dto';
 
 @Injectable()
 export class QuotationsService {
