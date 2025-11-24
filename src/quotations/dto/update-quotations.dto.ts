@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { CreateQuotationDto } from './create-quotation.dto';
+import { CreateQuotationDto } from './create-quotations.dto';
 
 import { QuotationStatus } from '@prisma/client';
 import { IsEnum, IsOptional, IsUUID } from 'class-validator';

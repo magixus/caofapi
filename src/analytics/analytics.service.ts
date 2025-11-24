@@ -17,7 +17,7 @@ export class AnalyticsService {
           include: { patient: true },
         }).then(quotations => {
           const grouped = quotations.reduce((acc, q) => {
-            const type = q.patient.insuranceType;
+            const type = q.patient.insuranceType || 'None';
             acc[type] = (acc[type] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
@@ -61,6 +61,13 @@ export class AnalyticsService {
     try {
       const employees = await this.prisma.employee.findMany({
         include: {
+          user: {
+            select: {
+              doctor: { select: { firstName: true, lastName: true } },
+              receptionist: { select: { firstName: true, lastName: true } },
+              applicator: { select: { firstName: true, lastName: true } },
+            },
+          },
           diagnosesAssignedTo: true,
           fabricationOrdersAssignedTo: true,
           executionOrdersAssignedTo: true,
@@ -68,15 +75,32 @@ export class AnalyticsService {
         },
       });
 
-      return employees.map(emp => ({
-        id: emp.id,
-        name: `${emp.firstName} ${emp.lastName}`,
-        diagnosesCount: emp.diagnosesAssignedTo.length,
-        fabricationOrdersCount: emp.fabricationOrdersAssignedTo.length,
-        executionOrdersCount: emp.executionOrdersAssignedTo.length,
-        quotationsCreated: emp.Quotation.length,
-        totalTasks: emp.diagnosesAssignedTo.length + emp.fabricationOrdersAssignedTo.length + emp.executionOrdersAssignedTo.length,
-      }));
+      return employees.map(emp => {
+        let firstName = 'Unknown';
+        let lastName = 'User';
+        
+        if (emp.user.doctor) {
+          firstName = emp.user.doctor.firstName;
+          lastName = emp.user.doctor.lastName;
+        } else if (emp.user.receptionist) {
+          firstName = emp.user.receptionist.firstName;
+          lastName = emp.user.receptionist.lastName;
+        } else if (emp.user.applicator) {
+          firstName = emp.user.applicator.firstName;
+          lastName = emp.user.applicator.lastName;
+        }
+
+        return {
+          userId: emp.userId,
+          name: `${firstName} ${lastName}`,
+          type: emp.type,
+          diagnosesCount: emp.diagnosesAssignedTo.length,
+          fabricationOrdersCount: emp.fabricationOrdersAssignedTo.length,
+          executionOrdersCount: emp.executionOrdersAssignedTo.length,
+          quotationsCreated: emp.Quotation.length,
+          totalTasks: emp.diagnosesAssignedTo.length + emp.fabricationOrdersAssignedTo.length + emp.executionOrdersAssignedTo.length,
+        };
+      });
     } catch (error) {
       this.logger.error(`Failed to fetch employee performance: ${error.message}`, error.stack);
       throw error;

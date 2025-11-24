@@ -3,8 +3,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Quotation } from '@prisma/client';
-import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
+import { CreateQuotationDto } from './dto/create-quotations.dto';
+import { UpdateQuotationDto } from './dto/update-quotations.dto';
 
 @Injectable()
 export class QuotationsService {
@@ -12,14 +12,56 @@ export class QuotationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Generate sequential quotation code in format: CA-YYYYMM0000000001
+   * Example: CA-202501000000001 (January 2025, sequence 1)
+   */
+  private async generateQuotationCode(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `CA-${year}${month}`;
+
+    // Find the last quotation for this year-month
+    const lastQuotation = await this.prisma.quotation.findFirst({
+      where: {
+        code: {
+          startsWith: prefix,
+        },
+      },
+      orderBy: {
+        code: 'desc',
+      },
+    });
+
+    let sequence = 1;
+    if (lastQuotation && lastQuotation.code) {
+      // Extract the last 10 digits and increment
+      const lastSequence = parseInt(lastQuotation.code.slice(-10), 10);
+      sequence = lastSequence + 1;
+    }
+
+    // Format: CA-YYYYMM0000000001 (10 digits for sequence)
+    const sequenceStr = String(sequence).padStart(10, '0');
+    const code = `${prefix}${sequenceStr}`;
+    
+    this.logger.log(`Generated quotation code: ${code}`);
+    return code;
+  }
+
   async create(
     createQuotationDto: CreateQuotationDto,
-    createdById: string,
+    userId: string,
   ): Promise<Quotation> {
     this.logger.log(
-      `Creating quotation for patient ID: ${createQuotationDto.patientId}`,
+      `Creating quotation for patient ID: ${createQuotationDto.patientId}, userId: ${userId}`,
     );
     try {
+      // Validate userId is provided
+      if (!userId) {
+        throw new NotFoundException('User ID is required (should come from authentication token)');
+      }
+
       // Validate patient exists
       const patient = await this.prisma.patient.findUnique({
         where: { id: createQuotationDto.patientId },
@@ -31,18 +73,37 @@ export class QuotationsService {
         );
       }
 
+      // Validate that user is an employee (has employee record)
+      const employee = await this.prisma.employee.findUnique({
+        where: { userId },
+      });
+
+      if (!employee) {
+        throw new NotFoundException(
+          `User with ID ${userId} is not registered as an employee. Only employees can create quotations.`,
+        );
+      }
+
+      // Generate sequential code
+      const code = await this.generateQuotationCode();
+
       const quotation = await this.prisma.quotation.create({
         data: {
-          patientId: createQuotationDto.patientId,
-          createdById,
-          status: createQuotationDto.status,
+          code,
+          patient: {
+            connect: { id: createQuotationDto.patientId }
+          },
+          createdBy: {
+            connect: { userId }
+          },
+          status: createQuotationDto.status || 'created',
         },
         include: {
           patient: true,
           createdBy: true,
         },
       });
-      this.logger.log(`Quotation created with ID: ${quotation.id}`);
+      this.logger.log(`Quotation created with ID: ${quotation.id}, code: ${quotation.code}`);
       return quotation;
     } catch (error) {
       this.logger.error(
@@ -51,6 +112,10 @@ export class QuotationsService {
       );
       throw error;
     }
+  }
+
+  async count(): Promise<number> {
+    return await this.prisma.quotation.count();
   }
 
   async findAll(): Promise<Quotation[]> {

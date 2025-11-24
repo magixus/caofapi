@@ -7,20 +7,28 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { ResourceAccessGuard } from '@/guards/resource-access.guard';
+import { RequireResourceRoles } from '@/decorators/resource-roles.decorator';
 
 @ApiTags('patients')
+@ApiBearerAuth()
 @Controller('patients')
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new patient' })
+  @UseGuards(JwtAuthGuard, ResourceAccessGuard)
+  @RequireResourceRoles('patient', 'create', ['admin', 'receptionist'])
+  @ApiOperation({ summary: 'Create a new patient (Admin & Receptionist only)' })
   @ApiResponse({ status: 201, description: 'Patient created successfully' })
+  @ApiResponse({ status: 403, description: 'Access denied - Only admin and receptionist can create patients' })
   create(@Body() createPatientDto: CreatePatientDto) {
     return this.patientsService.create(createPatientDto);
   }

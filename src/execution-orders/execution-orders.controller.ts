@@ -8,7 +8,7 @@ import {
   Query,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ExecutionOrdersService } from './execution-orders.service';
 import { CreateExecutionOrderDto } from './dto/create-execution-order.dto';
 import { UpdateExecutionOrderDto } from './dto/update-execution-order.dto';
@@ -17,6 +17,7 @@ import { AddComponentsDto } from './dto/add-components.dto';
 import { ExecutionOrderStatus } from '@prisma/client';
 
 @ApiTags('execution-orders')
+@ApiBearerAuth()
 @Controller('execution-orders')
 export class ExecutionOrdersController {
   constructor(private readonly executionOrdersService: ExecutionOrdersService) {}

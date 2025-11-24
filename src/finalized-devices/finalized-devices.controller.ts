@@ -6,12 +6,13 @@ import {
   Patch,
   Param,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { FinalizedDevicesService } from './finalized-devices.service';
 import { CreateFinalizedDeviceDto } from './dto/create-finalized-device.dto';
 import { UpdateFinalizedDeviceDto } from './dto/update-finalized-device.dto';
 
 @ApiTags('finalized-devices')
+@ApiBearerAuth()
 @Controller('finalized-devices')
 export class FinalizedDevicesController {
   constructor(private readonly finalizedDevicesService: FinalizedDevicesService) {}

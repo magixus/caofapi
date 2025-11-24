@@ -7,7 +7,7 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { FabricationOrdersService } from './fabrication-orders.service';
 import { CreateFabricationOrderDto } from './dto/create-fabrication-order.dto';
 import { UpdateFabricationOrderDto } from './dto/update-fabrication-order.dto';
@@ -15,6 +15,7 @@ import { AssignFabricationOrderDto } from './dto/assign-fabrication-order.dto';
 import { FabricationOrderStatus } from '@prisma/client';
 
 @ApiTags('fabrication-orders')
+@ApiBearerAuth()
 @Controller('fabrication-orders')
 export class FabricationOrdersController {
   constructor(private readonly fabricationOrdersService: FabricationOrdersService) {}

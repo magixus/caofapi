@@ -8,12 +8,16 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  password     String
-  roles        UserRole[]
-  createdAt    DateTime   @default(now())
-  isSuperAdmin Boolean    @default(false)
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String
+  roles         UserRole[]
+  createdAt     DateTime      @default(now())
+  isSuperAdmin  Boolean       @default(false)
+  employee      Employee?
+  doctor        Doctor?
+  receptionist  Receptionist?
+  applicator    Applicator?
 }
 
 model Role {
@@ -27,6 +31,7 @@ model Permission {
   id              String           @id @default(uuid())
   action          String
   resource        String
+  description     String
   rolePermissions RolePermission[] 
   @@unique([action, resource], name: "action_resource") 
 }
@@ -48,17 +53,13 @@ model UserRole {
 }
 
 model Employee {
-  id           String   @id @default(uuid())
-  firstName    String
-  lastName     String
-  nationalId   String   @db.Char(18)
-  dateOfBirth  DateTime
-  placeOfBirth String
-  photos       String[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // "doctor", "receptionist", "applicator", etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Reverse relations
+  // Old fields for backward compatibility with existing relations
   diagnosesAssignedTo         Diagnosis[]        @relation("DiagnosisAssignedTo")
   diagnosesAssignedBy         Diagnosis[]        @relation("DiagnosisAssignedBy")
   fabricationOrdersAssignedTo FabricationOrder[] @relation("FabricationOrderAssignedTo")
@@ -66,18 +67,135 @@ model Employee {
   executionOrdersAssignedTo   ExecutionOrder[]   @relation("ExecutionOrderAssignedTo")
   executionOrdersAssignedBy   ExecutionOrder[]   @relation("ExecutionOrderAssignedBy")
   Quotation                   Quotation[]
+  
+  @@index([type])
+}
+
+enum EmployeeStatus {
+  active
+  inactive
+  on_leave
+}
+
+enum Shift {
+  morning
+  afternoon
+  evening
+  night
+}
+
+model Doctor {
+  userId          String         @id
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  specialization  String
+  licenseNumber   String         @unique
+  dateOfBirth     DateTime
+  gender          String         // "Male" or "Female"
+  address         String
+  city            String
+  hireDate        DateTime
+  status          EmployeeStatus @default(active)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  @@index([email])
+  @@index([status])
+}
+
+model Receptionist {
+  userId      String         @id
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  email       String
+  phone       String
+  dateOfBirth DateTime
+  gender      String         // "Male" or "Female"
+  address     String
+  city        String
+  hireDate    DateTime
+  shift       Shift
+  status      EmployeeStatus @default(active)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@index([email])
+  @@index([status])
+}
+
+model Applicator {
+  userId              String         @id
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName           String
+  lastName            String
+  email               String
+  phone               String
+  specialization      String
+  certificationNumber String         @unique
+  dateOfBirth         DateTime
+  gender              String         // "Male" or "Female"
+  address             String
+  city                String
+  hireDate            DateTime
+  experienceYears     Int
+  status              EmployeeStatus @default(active)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  
+  @@index([email])
+  @@index([status])
 }
 
 model Patient {
-  id                   String      @id @default(uuid())
+  id                   String             @id @default(uuid())
   firstName            String
   lastName             String
-  nationalId           String      @db.Char(18)
-  socialSecurityNumber String      @db.Char(15)
-  insuranceType        String
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  email                String
+  phone                String
+  dateOfBirth          DateTime
+  gender               String             // "Male" or "Female"
+  address              String
+  city                 String
+  nationalId           String
+  socialSecurityNumber String
+  insuranceType        String?
+  bloodType            String             // A+, A-, B+, B-, AB+, AB-, O+, O-
+  allergies            String[]           @default([])
+  currentMedications   String[]           @default([])
+  emergencyContact     Json               // { name, relationship, phone }
+  documents            PatientDocument[]  // ID card, Chifa card, etc.
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   Quotation            Quotation[]
+}
+
+enum DocumentType {
+  ID_CARD
+  CHIFA_CARD
+  PRESCRIPTION
+  OTHER
+}
+
+model PatientDocument {
+  id          String       @id @default(uuid())
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId   String
+  quotation   Quotation?   @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  quotationId String?
+  type        DocumentType
+  fileName    String
+  fileUrl     String
+  fileSize    Int?
+  mimeType    String?
+  extractedData Json?      // MRZ data, OCR results, etc.
+  createdAt   DateTime     @default(now())
+  
+  @@index([patientId])
+  @@index([quotationId])
 }
 
 model Device {
@@ -115,18 +233,23 @@ enum QuotationStatus {
 }
 
 model Quotation {
-  id               String            @id @default(uuid())
-  patient          Patient           @relation(fields: [patientId], references: [id])
+  id               String             @id @default(uuid())
+  code             String             @unique // CA-YYYYMM0000000001 format
+  patient          Patient            @relation(fields: [patientId], references: [id])
   patientId        String
-  createdBy        Employee          @relation(fields: [createdById], references: [id])
+  createdBy        Employee           @relation(fields: [createdById], references: [userId])
   createdById      String
-  status           QuotationStatus   @default(created)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  status           QuotationStatus    @default(created)
+  documents        PatientDocument[]  // Related documents
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   Diagnosis        Diagnosis?
   FabricationOrder FabricationOrder?
   ExecutionOrder   ExecutionOrder[]
   FinalizedDevice  FinalizedDevice?
+  
+  @@index([code])
+  @@index([createdAt])
 }
 
 model Diagnosis {
@@ -137,10 +260,10 @@ model Diagnosis {
   medicalDevice      String
   photos             String[]
   patientTestimonial String?
-  assignedTo         Employee? @relation("DiagnosisAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo         Employee? @relation("DiagnosisAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId       String?
   assignedAt         DateTime?
-  assignedBy         Employee? @relation("DiagnosisAssignedBy", fields: [assignedById], references: [id])
+  assignedBy         Employee? @relation("DiagnosisAssignedBy", fields: [assignedById], references: [userId])
   assignedById       String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -156,10 +279,10 @@ model FabricationOrder {
   id           String                 @id @default(uuid())
   quotation    Quotation              @relation(fields: [quotationId], references: [id])
   quotationId  String                 @unique
-  assignedTo   Employee?              @relation("FabricationOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo   Employee?              @relation("FabricationOrderAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId String?
   assignedAt   DateTime?
-  assignedBy   Employee?              @relation("FabricationOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedBy   Employee?              @relation("FabricationOrderAssignedBy", fields: [assignedById], references: [userId])
   assignedById String?
   status       FabricationOrderStatus @default(created)
   createdAt    DateTime               @default(now())
@@ -201,9 +324,9 @@ model ExecutionOrder {
   deviceId     String
   components   ExecutionOrderComponents[]
   eta          DateTime?
-  assignedTo   Employee?                  @relation("ExecutionOrderAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo   Employee?                  @relation("ExecutionOrderAssignedTo", fields: [assignedToId], references: [userId])
   assignedToId String?
-  assignedBy   Employee?                  @relation("ExecutionOrderAssignedBy", fields: [assignedById], references: [id])
+  assignedBy   Employee?                  @relation("ExecutionOrderAssignedBy", fields: [assignedById], references: [userId])
   assignedById String?
   assignedAt   DateTime
   status       ExecutionOrderStatus       @default(created)
@@ -240,4 +363,39 @@ model NotificationRecipient {
 model UserGroup {
   userId    Int    @id
   groupName String
+}
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  ACCESS_DENIED
+  UNAUTHORIZED_ATTEMPT
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?     // Nullable for anonymous attempts
+  userEmail   String?
+  userRole    String?
+  action      AuditAction
+  resource    String      // e.g., "patient", "quotations", "device"
+  resourceId  String?     // ID of the affected resource
+  method      String?     // HTTP method (GET, POST, PUT, DELETE)
+  endpoint    String?     // API endpoint
+  ipAddress   String?
+  userAgent   String?
+  status      String      // success, denied, unauthorized, error
+  message     String      // Description of what happened
+  metadata    Json?       // Additional context (before/after values, etc.)
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([status])
 }

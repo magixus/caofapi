@@ -52,15 +52,7 @@ export class SearchService {
           },
           take: 5,
         }),
-        this.prisma.employee.findMany({
-          where: {
-            OR: [
-              { firstName: { contains: query, mode: 'insensitive' } },
-              { lastName: { contains: query, mode: 'insensitive' } },
-            ],
-          },
-          take: 5,
-        }),
+        this.searchEmployees(query),
       ]);
 
       return { patients, quotations, devices, components, employees };
@@ -68,5 +60,46 @@ export class SearchService {
       this.logger.error(`Global search failed: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  private async searchEmployees(query: string) {
+    const [doctors, receptionists, applicators] = await Promise.all([
+      this.prisma.doctor.findMany({
+        where: {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        take: 5,
+      }),
+      this.prisma.receptionist.findMany({
+        where: {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        take: 5,
+      }),
+      this.prisma.applicator.findMany({
+        where: {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        take: 5,
+      }),
+    ]);
+
+    return [
+      ...doctors.map(d => ({ ...d, type: 'doctor' })),
+      ...receptionists.map(r => ({ ...r, type: 'receptionist' })),
+      ...applicators.map(a => ({ ...a, type: 'applicator' }))
+    ].slice(0, 5);
   }
 }
